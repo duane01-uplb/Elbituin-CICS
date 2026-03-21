@@ -1,0 +1,555 @@
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  height: 200px;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.container {
+  display: grid;
+  grid-template-columns: 380px 1fr;
+  gap: 20px;
+  height: 100%;
+  overflow-y: auto;
+  padding: 20px;
+}
+
+/* ── Left Column ──────────────────────────────────────────────────────────── */
+.left {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* Profile card */
+.profileCard {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  background: var(--navy);
+  border-radius: var(--radius-lg);
+  color: #fff;
+  position: relative;
+}
+
+.avatar {
+  width: 48px;
+  height: 48px;
+  background: var(--fuel-orange);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: #fff;
+  flex-shrink: 0;
+  box-shadow: var(--shadow-orange);
+}
+
+.userName {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 700;
+  margin-bottom: 2px;
+}
+
+.userMeta {
+  font-size: 0.75rem;
+  color: rgba(255,255,255,0.7);
+  margin-bottom: 1px;
+}
+
+.memberSince {
+  font-size: 0.65rem;
+  color: rgba(255,255,255,0.4);
+}
+
+.coopBadge {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  padding: 3px 8px;
+  background: rgba(249,115,22,0.2);
+  border: 1px solid rgba(249,115,22,0.35);
+  border-radius: var(--radius-full);
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--fuel-orange-light);
+}
+
+/* Wallet card */
+.walletCard {
+  padding: 16px;
+  background: linear-gradient(135deg, #F97316, #C2410C);
+  border-radius: var(--radius-lg);
+  color: #fff;
+  box-shadow: var(--shadow-orange);
+}
+
+.walletLabel {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  opacity: 0.85;
+  margin-bottom: 4px;
+}
+
+.walletBalance {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  font-weight: 800;
+  margin-bottom: 2px;
+  letter-spacing: -0.02em;
+}
+
+.walletSub {
+  font-size: 0.72rem;
+  opacity: 0.8;
+  margin-bottom: 12px;
+}
+
+.coopPool {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: rgba(0,0,0,0.15);
+  border-radius: var(--radius-md);
+  margin-bottom: 8px;
+}
+
+.coopPoolLabel {
+  font-size: 0.72rem;
+  opacity: 0.85;
+}
+
+.coopPoolValue {
+  font-family: var(--font-display);
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.nextPurchase {
+  font-size: 0.72rem;
+  opacity: 0.85;
+}
+
+/* Section title */
+.sectionTitle {
+  font-family: var(--font-display);
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+}
+
+/* Stats grid */
+.statsGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.statCard {
+  padding: 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  box-shadow: var(--shadow-sm);
+}
+
+.statSavings {
+  background: #F0FDF4 !important;
+  border-color: #BBF7D0 !important;
+}
+
+.statIcon {
+  font-size: 1.1rem;
+}
+
+.statValue {
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+.statSavings .statValue {
+  color: #15803D;
+}
+
+.statLabel {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+/* Savings progress */
+.savingsSection {
+  padding: 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+.savingsHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.savingsPercent {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--fuel-orange);
+}
+
+.progressBar {
+  height: 8px;
+  background: var(--surface-3);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+
+.progressFill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--fuel-orange), var(--fuel-orange-dark));
+  border-radius: 4px;
+  transition: width 0.8s ease;
+}
+
+.savingsNote {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.treesNote {
+  font-size: 0.7rem;
+  color: #16A34A;
+}
+
+/* Badges */
+.badgesGrid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+}
+
+.badge {
+  padding: 8px 4px;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-md);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  position: relative;
+  transition: all 0.15s;
+}
+
+.badge:not(.badgeLocked):hover {
+  border-color: var(--fuel-orange);
+  background: rgba(249,115,22,0.04);
+}
+
+.badgeLocked {
+  opacity: 0.4;
+  filter: grayscale(0.6);
+}
+
+.badgeIcon {
+  font-size: 1.3rem;
+}
+
+.badgeLabel {
+  font-size: 0.55rem;
+  font-weight: 600;
+  text-align: center;
+  color: var(--text-muted);
+  line-height: 1.2;
+}
+
+.lockIcon {
+  position: absolute;
+  top: 2px;
+  right: 3px;
+  font-size: 0.55rem;
+}
+
+/* ── Right Column ─────────────────────────────────────────────────────────── */
+.right {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Chart card */
+.chartCard {
+  padding: 20px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+.chartTitle {
+  font-family: var(--font-display);
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.chartLegend {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.legendSpend, .legendSavings {
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding-left: 10px;
+  position: relative;
+}
+
+.legendSpend::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #CBD5E1;
+}
+
+.legendSavings::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--fuel-orange);
+}
+
+.legendSpend { color: var(--text-muted); }
+.legendSavings { color: var(--fuel-orange); }
+
+.chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  height: 160px;
+}
+
+.chartCol {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  height: 100%;
+  justify-content: flex-end;
+}
+
+.barGroup {
+  display: flex;
+  gap: 3px;
+  align-items: flex-end;
+  flex: 1;
+  width: 100%;
+  justify-content: center;
+}
+
+.barSpend {
+  width: 12px;
+  background: #CBD5E1;
+  border-radius: 3px 3px 0 0;
+  transition: height 0.6s ease;
+  min-height: 4px;
+}
+
+.barSavings {
+  width: 12px;
+  background: var(--fuel-orange);
+  border-radius: 3px 3px 0 0;
+  transition: height 0.6s ease;
+  min-height: 4px;
+}
+
+.chartLabel {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.chartValue {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: var(--fuel-orange);
+}
+
+/* Price comparison card */
+.priceCompCard {
+  padding: 16px 20px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+.priceCompGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin: 12px 0;
+}
+
+.priceCompItem {
+  padding: 12px;
+  background: var(--surface-3);
+  border-radius: var(--radius-md);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.priceCompBest {
+  background: #F0FDF4 !important;
+}
+
+.priceCompLabel {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.priceCompValue {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+.priceCompBest .priceCompValue {
+  color: #16A34A;
+}
+
+.priceCompNote {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+/* Leaderboard */
+.leaderboardCard {
+  padding: 16px 20px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+.leaderboard {
+  margin: 12px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.leaderRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  background: var(--surface-3);
+  transition: background 0.15s;
+}
+
+.leaderRowYou {
+  background: rgba(249,115,22,0.06) !important;
+  border: 1.5px solid var(--fuel-orange) !important;
+}
+
+.leaderRank {
+  font-size: 1rem;
+  width: 28px;
+  flex-shrink: 0;
+  text-align: center;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.leaderName {
+  flex: 1;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.youTag {
+  padding: 1px 7px;
+  background: var(--fuel-orange);
+  color: #fff;
+  border-radius: var(--radius-full);
+  font-size: 0.6rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.leaderTrips {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.leaderSavings {
+  font-family: var(--font-display);
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #16A34A;
+}
+
+.leaderNote {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+/* ── Responsive ───────────────────────────────────────────────────────────── */
+@media (max-width: 900px) {
+  .container {
+    grid-template-columns: 1fr;
+  }
+  .badgesGrid {
+    grid-template-columns: repeat(5, 1fr);
+  }
+}

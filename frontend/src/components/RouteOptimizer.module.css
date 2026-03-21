@@ -1,0 +1,406 @@
+.container {
+  display: grid;
+  grid-template-columns: 360px 1fr;
+  height: 100%;
+  gap: 0;
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-md);
+}
+
+/* ── Form Panel ───────────────────────────────────────────────────────────── */
+.panel {
+  padding: 20px;
+  overflow-y: auto;
+  border-right: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.panelTitle {
+  font-family: var(--font-display);
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.panelSub {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-bottom: 20px;
+  line-height: 1.5;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.fieldGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+}
+
+/* Coord display (click to pick) */
+.coordRow {
+  width: 100%;
+}
+
+.coordDisplay {
+  padding: 10px 14px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all 0.15s;
+  background: var(--surface-3);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-height: 48px;
+  justify-content: center;
+}
+
+.coordDisplay:hover {
+  border-color: var(--fuel-orange);
+  background: rgba(249,115,22,0.04);
+}
+
+.picking {
+  border-color: var(--fuel-orange) !important;
+  background: rgba(249,115,22,0.06) !important;
+  animation: pulse-orange 1.5s infinite;
+}
+
+.coordPlaceholder {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.coordLabel {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.coordValue {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  font-family: monospace;
+}
+
+.quickBtns {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.quickBtn {
+  padding: 4px 9px;
+  background: var(--surface-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  font-family: var(--font-body);
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.quickBtn:hover {
+  background: var(--navy);
+  color: #fff;
+  border-color: var(--navy);
+}
+
+/* Vehicle grid */
+.vehicleGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.vehicleBtn {
+  padding: 10px 8px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-3);
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.15s;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.vehicleBtn:hover {
+  border-color: var(--slate-light);
+}
+
+.vehicleBtnActive {
+  border-color: var(--fuel-orange) !important;
+  background: rgba(249,115,22,0.06) !important;
+}
+
+.vehicleLabel {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.vehicleConsumption {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+}
+
+/* Fuel type row */
+.fuelRow {
+  display: flex;
+  gap: 6px;
+}
+
+.fuelBtn {
+  flex: 1;
+  padding: 8px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-3);
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.fuelBtnActive {
+  border-color: var(--fuel-orange) !important;
+  background: var(--fuel-orange) !important;
+  color: #fff !important;
+  font-weight: 700;
+}
+
+.error {
+  padding: 10px 14px;
+  background: #FEF2F2;
+  border: 1px solid #FECACA;
+  border-radius: var(--radius-md);
+  font-size: 0.8rem;
+  color: #991B1B;
+}
+
+.submitBtn {
+  padding: 13px;
+  background: var(--fuel-orange);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-md);
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-shadow: var(--shadow-orange);
+}
+
+.submitBtn:hover:not(:disabled) {
+  background: var(--fuel-orange-dark);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 24px rgba(249,115,22,0.35);
+}
+
+.submitBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ── Result ───────────────────────────────────────────────────────────────── */
+.result {
+  margin-top: 16px;
+  padding: 16px;
+  background: var(--surface-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+}
+
+.resultTitle {
+  font-family: var(--font-display);
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 12px;
+}
+
+.statsGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.stat {
+  padding: 10px 12px;
+  background: var(--surface);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.statHighlight {
+  background: rgba(249,115,22,0.06) !important;
+  border-color: var(--fuel-orange) !important;
+}
+
+.statValue {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+.statHighlight .statValue {
+  color: var(--fuel-orange);
+}
+
+.statLabel {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+/* Station recommendation */
+.stationRec {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: #DCFCE7;
+  border: 1px solid #BBF7D0;
+  border-radius: var(--radius-md);
+  margin-bottom: 10px;
+}
+
+.stationRecIcon {
+  font-size: 1.4rem;
+  flex-shrink: 0;
+}
+
+.stationRecName {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #15803D;
+  margin-bottom: 1px;
+}
+
+.stationRecDetail {
+  font-size: 0.72rem;
+  color: #166534;
+}
+
+.savingsPill {
+  margin-left: auto;
+  padding: 3px 9px;
+  background: #16A34A;
+  color: #fff;
+  border-radius: var(--radius-full);
+  font-size: 0.72rem;
+  font-weight: 700;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.tips {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.tip {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  padding: 6px 8px;
+  background: var(--surface);
+  border-radius: var(--radius-sm);
+  border-left: 3px solid var(--fuel-orange-light);
+}
+
+/* ── Map ──────────────────────────────────────────────────────────────────── */
+.mapWrapper {
+  position: relative;
+  flex: 1;
+}
+
+.map {
+  width: 100%;
+  height: 100%;
+  min-height: 500px;
+}
+
+.pickBanner {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 400;
+  background: var(--navy);
+  color: #fff;
+  padding: 10px 16px;
+  border-radius: var(--radius-full);
+  font-size: 0.85rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-shadow: var(--shadow-lg);
+  white-space: nowrap;
+}
+
+.cancelPick {
+  padding: 3px 10px;
+  background: rgba(255,255,255,0.15);
+  border: 1px solid rgba(255,255,255,0.25);
+  border-radius: var(--radius-full);
+  color: #fff;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.cancelPick:hover {
+  background: rgba(255,255,255,0.25);
+}
+
+/* ── Responsive ───────────────────────────────────────────────────────────── */
+@media (max-width: 900px) {
+  .container {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr;
+  }
+  .panel {
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    max-height: 60vh;
+  }
+}
+
+@media (max-width: 768px) {
+  .statsGrid {
+    grid-template-columns: 1fr 1fr;
+  }
+}

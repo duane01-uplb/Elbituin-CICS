@@ -1,0 +1,155 @@
+/* FuelBridge Global Styles */
+/* Design: Industrial-warm utility aesthetic — orange fuel energy + deep navy utility */
+/* Font: Syne (display) + DM Sans (body) — modern Filipino-friendly pairing */
+
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap');
+
+:root {
+  /* Core palette */
+  --fuel-orange: #F97316;
+  --fuel-orange-light: #FED7AA;
+  --fuel-orange-dark: #C2410C;
+  --navy: #0F172A;
+  --navy-mid: #1E293B;
+  --navy-light: #334155;
+  --slate: #64748B;
+  --slate-light: #94A3B8;
+
+  /* Price colors */
+  --price-cheap: #22C55E;
+  --price-medium: #EAB308;
+  --price-expensive: #EF4444;
+
+  /* Surface colors */
+  --surface: #FFFFFF;
+  --surface-2: #F8FAFC;
+  --surface-3: #F1F5F9;
+  --border: #E2E8F0;
+  --border-focus: var(--fuel-orange);
+
+  /* Text */
+  --text-primary: #0F172A;
+  --text-secondary: #475569;
+  --text-muted: #94A3B8;
+  --text-on-dark: #F8FAFC;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06);
+  --shadow-md: 0 4px 16px rgba(0,0,0,0.10), 0 2px 6px rgba(0,0,0,0.06);
+  --shadow-lg: 0 10px 40px rgba(0,0,0,0.12), 0 4px 12px rgba(0,0,0,0.08);
+  --shadow-orange: 0 4px 20px rgba(249, 115, 22, 0.25);
+
+  /* Spacing */
+  --radius-sm: 6px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+  --radius-xl: 24px;
+  --radius-full: 9999px;
+
+  /* Fonts */
+  --font-display: 'Syne', sans-serif;
+  --font-body: 'DM Sans', sans-serif;
+}
+
+/* ─── Reset ─────────────────────────────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-size: 16px;
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  font-family: var(--font-body);
+  color: var(--text-primary);
+  background: var(--surface-2);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+}
+
+/* ─── Leaflet map fixes ──────────────────────────────────────────────────────── */
+.leaflet-container {
+  font-family: var(--font-body) !important;
+  z-index: 1;
+}
+
+.leaflet-popup-content-wrapper {
+  border-radius: var(--radius-md) !important;
+  box-shadow: var(--shadow-lg) !important;
+  border: 1px solid var(--border);
+}
+
+.leaflet-popup-content {
+  margin: 0 !important;
+  line-height: 1.5;
+}
+
+.leaflet-popup-tip-container {
+  display: none;
+}
+
+/* ─── Custom scrollbar ───────────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--surface-3); border-radius: 3px; }
+::-webkit-scrollbar-thumb { background: var(--slate-light); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--slate); }
+
+/* ─── Utility classes ────────────────────────────────────────────────────────── */
+.text-orange { color: var(--fuel-orange); }
+.text-cheap { color: var(--price-cheap); }
+.text-expensive { color: var(--price-expensive); }
+.text-medium { color: var(--price-medium); }
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: var(--radius-full);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.badge-cheap { background: #DCFCE7; color: #166534; }
+.badge-medium { background: #FEF9C3; color: #854D0E; }
+.badge-expensive { background: #FEE2E2; color: #991B1B; }
+
+/* ─── Animations ─────────────────────────────────────────────────────────────── */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulse-orange {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(249,115,22,0.4); }
+  50% { box-shadow: 0 0 0 8px rgba(249,115,22,0); }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.animate-fadeIn { animation: fadeIn 0.25s ease forwards; }
+.animate-spin { animation: spin 0.8s linear infinite; }
+
+/* ─── Loading spinner ────────────────────────────────────────────────────────── */
+.spinner {
+  width: 20px; height: 20px;
+  border: 2px solid var(--border);
+  border-top-color: var(--fuel-orange);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  display: inline-block;
+}
+
+/* ─── Mobile responsive base ─────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  html { font-size: 15px; }
+}
