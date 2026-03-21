@@ -7,7 +7,7 @@
   height: 100vh;
   display: flex;
   flex-direction: column;
-  background: transparent; /* body handles the mesh */
+  background: transparent;
   overflow: hidden;
 }
 
@@ -17,10 +17,10 @@
   flex-direction: column;
   padding: 14px 20px 16px;
   gap: 12px;
-  max-width: 1520px;
-  margin: 0 auto;
-  width: 100%;
-  min-height: 0; /* critical: lets flex children shrink below content size */
+  min-width: 0;
+  min-height: 0;
+  margin-left: var(--sidebar-width, 220px);
+  transition: margin-left 0.25s cubic-bezier(0.25,0.46,0.45,0.94);
 }
 
 /* ── Hero Banner ───────────────────────────────────────────── */
@@ -209,6 +209,7 @@
   .main {
     padding: 10px 10px 90px; /* space for mobile bottom nav */
     gap: 10px;
+    margin-left: 0; /* sidebar hidden on mobile */
   }
 
   .heroContent {

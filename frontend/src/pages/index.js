@@ -4,11 +4,10 @@ import Head from "next/head";
 import Navbar from "../components/Navbar";
 import styles from "./index.module.css";
 
-// Dynamic imports to prevent SSR issues with Leaflet
-const FuelMap = dynamic(() => import("../components/FuelMap"), { ssr: false });
+const FuelMap       = dynamic(() => import("../components/FuelMap"),       { ssr: false });
 const RouteOptimizer = dynamic(() => import("../components/RouteOptimizer"), { ssr: false });
-const FuelWallet = dynamic(() => import("../components/FuelWallet"), { ssr: false });
-const AIChat = dynamic(() => import("../components/AIChat"), { ssr: false });
+const FuelWallet    = dynamic(() => import("../components/FuelWallet"),    { ssr: false });
+const AIChat        = dynamic(() => import("../components/AIChat"),        { ssr: false });
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState("map");
@@ -21,11 +20,14 @@ export default function Home() {
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
       </Head>
 
-      <div className={styles.layout}>
-        <Navbar activeTab={activeTab} onTabChange={setActiveTab} />
+      {/* Sidebar renders outside the layout so it never affects flow */}
+      <Navbar activeTab={activeTab} onTabChange={setActiveTab} />
 
+      {/* Main content — margin-left via CSS var set by Navbar collapse toggle */}
+      <div className={styles.layout}>
         <main className={styles.main}>
-          {/* Hero banner (visible only on map tab) */}
+
+          {/* Hero banner — map tab only */}
           {activeTab === "map" && (
             <div className={styles.heroBanner}>
               <div className={styles.heroContent}>
@@ -57,18 +59,12 @@ export default function Home() {
           )}
 
           <div className={styles.tabContent}>
-            {activeTab === "map" && <FuelMap />}
-            {activeTab === "route" && <RouteOptimizer />}
+            {activeTab === "map"    && <FuelMap />}
+            {activeTab === "route"  && <RouteOptimizer />}
             {activeTab === "wallet" && <FuelWallet />}
-            {activeTab === "chat" && <AIChat />}
+            {activeTab === "chat"   && <AIChat />}
           </div>
         </main>
-
-        {/* Footer */}
-        <footer className={styles.footer}>
-          <span>FuelBridge v1.0 Prototype · Hackathon Build · Data: DOE Philippines (mock)</span>
-          <span>Made with ❤️ for Filipino drivers</span>
-        </footer>
       </div>
     </>
   );
