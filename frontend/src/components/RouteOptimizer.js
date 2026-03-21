@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { fetchRoute, formatPeso } from "../lib/api";
 import styles from "./RouteOptimizer.module.css";
-
+ 
 // Philippine landmark shortcuts for demo
 const QUICK_LOCATIONS = [
   { label: "Laguna Techno Park", lat: 14.2683, lng: 121.1447 },
@@ -11,22 +11,23 @@ const QUICK_LOCATIONS = [
   { label: "SM Sta. Rosa", lat: 14.3125, lng: 121.0847 },
   { label: "UP Los Baños", lat: 14.1660, lng: 121.2430 },
 ];
-
+ 
 const VEHICLE_TYPES = [
   { value: "tricycle", label: "🛺 Tricycle", consumption: "4.5 L/100km" },
   { value: "jeepney", label: "🚌 Jeepney", consumption: "12 L/100km" },
   { value: "motorcycle", label: "🏍️ Motorcycle", consumption: "3.2 L/100km" },
   { value: "delivery_van", label: "🚐 Delivery Van", consumption: "10 L/100km" },
 ];
-
+ 
 let L;
-
+ 
 export default function RouteOptimizer() {
   const mapRef = useRef(null);
   const leafletMap = useRef(null);
   const routeLayerRef = useRef(null);
   const markerGroupRef = useRef(null);
-
+  const pickModeRef = useRef(null); // ← fix: ref to track pickMode for click handler closure
+ 
   const [startCoords, setStartCoords] = useState({ lat: "", lng: "", label: "" });
   const [endCoords, setEndCoords] = useState({ lat: "", lng: "", label: "" });
   const [vehicleType, setVehicleType] = useState("tricycle");
@@ -35,78 +36,94 @@ export default function RouteOptimizer() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [pickMode, setPickMode] = useState(null); // 'start' | 'end' | null
-
+ 
+  // Helper to keep ref and state in sync
+  function updatePickMode(val) {
+    pickModeRef.current = val;
+    setPickMode(val);
+  }
+ 
   // Init Leaflet map
   useEffect(() => {
-    if (typeof window === "undefined" || leafletMap.current) return;
-
+    if (typeof window === "undefined") return;
+ 
+    let isMounted = true;
+ 
     async function initMap() {
       L = (await import("leaflet")).default;
-
+ 
+      // Already initialized — skip (fixes Strict Mode double-invoke)
+      if (mapRef.current && mapRef.current._leaflet_id) return;
+      if (!isMounted || !mapRef.current) return;
+ 
       delete L.Icon.Default.prototype._getIconUrl;
       L.Icon.Default.mergeOptions({
         iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
         iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
         shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
       });
-
+ 
       leafletMap.current = L.map(mapRef.current, {
         center: [14.3800, 121.0800],
         zoom: 10,
       });
-
+ 
       L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
         attribution: "© OpenStreetMap contributors",
         maxZoom: 19,
       }).addTo(leafletMap.current);
-
+ 
       markerGroupRef.current = L.layerGroup().addTo(leafletMap.current);
-
-      // Click to pick location
+ 
+      // Click to pick location — uses ref so it always sees latest pickMode
       leafletMap.current.on("click", (e) => {
-        if (!pickMode) return;
-        const coords = { lat: e.latlng.lat.toFixed(5), lng: e.latlng.lng.toFixed(5), label: "Custom location" };
-        if (pickMode === "start") setStartCoords(coords);
+        if (!pickModeRef.current) return;
+        const coords = {
+          lat: e.latlng.lat.toFixed(5),
+          lng: e.latlng.lng.toFixed(5),
+          label: "Custom location",
+        };
+        if (pickModeRef.current === "start") setStartCoords(coords);
         else setEndCoords(coords);
-        setPickMode(null);
+        updatePickMode(null);
       });
     }
-
+ 
     initMap();
-
+ 
     return () => {
+      isMounted = false;
       if (leafletMap.current) {
         leafletMap.current.remove();
         leafletMap.current = null;
       }
     };
   }, []);
-
+ 
   // Update pick mode cursor
   useEffect(() => {
     if (!leafletMap.current) return;
     leafletMap.current.getContainer().style.cursor = pickMode ? "crosshair" : "";
   }, [pickMode]);
-
+ 
   // Draw route when result changes
   useEffect(() => {
     if (!leafletMap.current || !result || !L) return;
-
+ 
     // Clear previous route
     if (routeLayerRef.current) routeLayerRef.current.remove();
     markerGroupRef.current.clearLayers();
-
+ 
     const { waypoints } = result.route;
     const latlngs = waypoints.map((wp) => [wp.lat, wp.lng]);
-
+ 
     // Draw polyline
     routeLayerRef.current = L.polyline(latlngs, {
       color: "#F97316",
       weight: 5,
       opacity: 0.85,
-      dashArray: null,
     }).addTo(leafletMap.current);
-
+ 
     // Start marker (green)
     const startIcon = L.divIcon({
       html: `<div style="width:16px;height:16px;background:#22C55E;border:3px solid #fff;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,0.3)"></div>`,
@@ -117,7 +134,7 @@ export default function RouteOptimizer() {
     L.marker(latlngs[0], { icon: startIcon })
       .bindTooltip("📍 Start")
       .addTo(markerGroupRef.current);
-
+ 
     // End marker (red)
     const endIcon = L.divIcon({
       html: `<div style="width:16px;height:16px;background:#EF4444;border:3px solid #fff;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,0.3)"></div>`,
@@ -128,7 +145,7 @@ export default function RouteOptimizer() {
     L.marker(latlngs[latlngs.length - 1], { icon: endIcon })
       .bindTooltip("🏁 Destination")
       .addTo(markerGroupRef.current);
-
+ 
     // Recommended station marker
     if (result.recommended_station) {
       const stationIcon = L.divIcon({
@@ -146,22 +163,22 @@ export default function RouteOptimizer() {
         )
         .addTo(markerGroupRef.current);
     }
-
+ 
     // Fit bounds
     leafletMap.current.fitBounds(routeLayerRef.current.getBounds(), { padding: [40, 40] });
   }, [result]);
-
+ 
   async function handleOptimize(e) {
     e.preventDefault();
     if (!startCoords.lat || !endCoords.lat) {
       setError("Please select both a start and destination point.");
       return;
     }
-
+ 
     setLoading(true);
     setError(null);
     setResult(null);
-
+ 
     try {
       const data = await fetchRoute({
         startLat: startCoords.lat,
@@ -178,20 +195,20 @@ export default function RouteOptimizer() {
       setLoading(false);
     }
   }
-
+ 
   function useQuickLocation(location, field) {
     const coords = { lat: location.lat, lng: location.lng, label: location.label };
     if (field === "start") setStartCoords(coords);
     else setEndCoords(coords);
   }
-
+ 
   return (
     <div className={styles.container}>
       {/* Form panel */}
       <div className={styles.panel}>
         <h2 className={styles.panelTitle}>Route Optimizer</h2>
         <p className={styles.panelSub}>Find the most fuel-efficient path and cheapest refueling stop.</p>
-
+ 
         <form onSubmit={handleOptimize} className={styles.form}>
           {/* Start location */}
           <div className={styles.fieldGroup}>
@@ -199,7 +216,7 @@ export default function RouteOptimizer() {
             <div className={styles.coordRow}>
               <div
                 className={`${styles.coordDisplay} ${pickMode === "start" ? styles.picking : ""}`}
-                onClick={() => setPickMode(pickMode === "start" ? null : "start")}
+                onClick={() => updatePickMode(pickMode === "start" ? null : "start")}
               >
                 {startCoords.label
                   ? <><span className={styles.coordLabel}>{startCoords.label}</span><span className={styles.coordValue}>{startCoords.lat}, {startCoords.lng}</span></>
@@ -216,14 +233,14 @@ export default function RouteOptimizer() {
               ))}
             </div>
           </div>
-
+ 
           {/* End location */}
           <div className={styles.fieldGroup}>
             <label className={styles.label}>🏁 Destination</label>
             <div className={styles.coordRow}>
               <div
                 className={`${styles.coordDisplay} ${pickMode === "end" ? styles.picking : ""}`}
-                onClick={() => setPickMode(pickMode === "end" ? null : "end")}
+                onClick={() => updatePickMode(pickMode === "end" ? null : "end")}
               >
                 {endCoords.label
                   ? <><span className={styles.coordLabel}>{endCoords.label}</span><span className={styles.coordValue}>{endCoords.lat}, {endCoords.lng}</span></>
@@ -240,7 +257,7 @@ export default function RouteOptimizer() {
               ))}
             </div>
           </div>
-
+ 
           {/* Vehicle type */}
           <div className={styles.fieldGroup}>
             <label className={styles.label}>🚗 Vehicle Type</label>
@@ -255,7 +272,7 @@ export default function RouteOptimizer() {
               ))}
             </div>
           </div>
-
+ 
           {/* Fuel type */}
           <div className={styles.fieldGroup}>
             <label className={styles.label}>⛽ Fuel Type</label>
@@ -269,14 +286,14 @@ export default function RouteOptimizer() {
               ))}
             </div>
           </div>
-
+ 
           {error && <div className={styles.error}>{error}</div>}
-
+ 
           <button type="submit" className={styles.submitBtn} disabled={loading}>
             {loading ? <><span className="spinner" /> Calculating...</> : "⚡ Optimize Route"}
           </button>
         </form>
-
+ 
         {/* Result summary */}
         {result && (
           <div className={styles.result + " animate-fadeIn"}>
@@ -299,7 +316,7 @@ export default function RouteOptimizer() {
                 <span className={styles.statLabel}>Est. Fuel Cost</span>
               </div>
             </div>
-
+ 
             {result.recommended_station && (
               <div className={styles.stationRec}>
                 <span className={styles.stationRecIcon}>⛽</span>
@@ -312,7 +329,7 @@ export default function RouteOptimizer() {
                 <span className={styles.savingsPill}>Save {formatPeso(result.route.potential_savings_php)}</span>
               </div>
             )}
-
+ 
             <div className={styles.tips}>
               {result.tips.map((tip, i) => (
                 <div key={i} className={styles.tip}>💡 {tip}</div>
@@ -321,13 +338,13 @@ export default function RouteOptimizer() {
           </div>
         )}
       </div>
-
+ 
       {/* Map */}
       <div className={styles.mapWrapper}>
         {pickMode && (
           <div className={styles.pickBanner}>
             🎯 Click anywhere on the map to set your {pickMode === "start" ? "start" : "destination"} point
-            <button className={styles.cancelPick} onClick={() => setPickMode(null)}>Cancel</button>
+            <button className={styles.cancelPick} onClick={() => updatePickMode(null)}>Cancel</button>
           </div>
         )}
         <div ref={mapRef} className={styles.map} />
