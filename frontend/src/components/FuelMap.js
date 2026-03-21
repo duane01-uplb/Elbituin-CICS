@@ -1,400 +1,558 @@
 import { useEffect, useRef, useState, useCallback } from "react";
-import { fetchFuelPrices, formatPeso, getMarkerColor } from "../lib/api";
+import { fetchFuelPrices, formatPeso } from "../lib/api";
 import styles from "./FuelMap.module.css";
 
+/* ─── Constants ─────────────────────────────────────────────── */
 const FUEL_TYPES = [
-  { value: "gas91", label: "Gas 91" },
-  { value: "gas95", label: "Gas 95" },
-  { value: "diesel", label: "Diesel" },
+  { value: "gas91",  label: "Gas 91"  },
+  { value: "gas95",  label: "Gas 95"  },
+  { value: "diesel", label: "Diesel"  },
 ];
 
 const PRICE_COLORS = {
-  cheap:     { fill: "#00E5A0", glow: "rgba(0,229,160,0.6)",   hex: "#00E5A0" },
-  medium:    { fill: "#FFD166", glow: "rgba(255,209,102,0.6)", hex: "#FFD166" },
-  expensive: { fill: "#FF4757", glow: "rgba(255,71,87,0.6)",   hex: "#FF4757" },
+  cheap:     { fill: "#00E5A0", stroke: "#00b37a", text: "#002b1e", glow: "rgba(0,229,160,0.6)"   },
+  medium:    { fill: "#FFD166", stroke: "#c99a00", text: "#2b1f00", glow: "rgba(255,209,102,0.6)" },
+  expensive: { fill: "#FF4757", stroke: "#c40013", text: "#2b0005", glow: "rgba(255,71,87,0.6)"   },
 };
 
-// Custom dark fuel-themed MapLibre style (OpenFreeMap or CARTO dark)
-const MAP_STYLE = "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json";
+const PH_BOUNDS = { minLat: 13.8, maxLat: 14.95, minLng: 120.5, maxLng: 121.8 };
+const MAP_CENTER  = [121.0603, 14.4292];
+const MAP_ZOOM    = 11;
+const MAP_PITCH   = 45;
+const MAP_BEARING = -8;
 
-// Metro Manila + Laguna center
-const MAP_CENTER = [121.0603, 14.4292];
-const MAP_ZOOM   = 10;
-const MAP_PITCH  = 52;   // 3D tilt
-const MAP_BEARING = -12; // slight rotation for drama
+const MAP_STYLE          = "https://tiles.stadiamaps.com/styles/alidade_smooth_dark.json";
+const MAP_STYLE_FALLBACK = "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json";
 
+const SRC_ID         = "fb-stations";
+const LAYER_PINS     = "fb-pins";
+const LAYER_SELECTED = "fb-selected-ring";
+
+/* ─── Draw a realistic map pin: circle head + sharp spike ───── */
+// Canvas 40×58px. Anchor = bottom centre (spike tip).
+function drawPinImage(color, size = 2) {
+  const W    = 40 * size;
+  const H    = 58 * size;
+  const cx   = W / 2;
+  const r    = 14 * size;        // sphere radius
+  const cy   = r + 3 * size;     // sphere centre (with top padding)
+  const tipY = H - 1 * size;     // sharp spike tip
+
+  const canvas = document.createElement("canvas");
+  canvas.width  = W;
+  canvas.height = H;
+  const ctx = canvas.getContext("2d");
+
+  // ── Pin shadow ──
+  ctx.shadowColor   = "rgba(0,0,0,0.65)";
+  ctx.shadowBlur    = 7 * size;
+  ctx.shadowOffsetX = 1 * size;
+  ctx.shadowOffsetY = 4 * size;
+
+  // ── Spike body (triangle from circle bottom to sharp tip) ──
+  const sw = 5.5 * size; // half-width at spike base
+  ctx.beginPath();
+  ctx.moveTo(cx - sw, cy + r * 0.65);
+  ctx.lineTo(cx,      tipY);
+  ctx.lineTo(cx + sw, cy + r * 0.65);
+  // close with arc across the bottom of the sphere
+  ctx.arc(cx, cy, r, Math.PI * 0.74, Math.PI * 0.26, true);
+  ctx.closePath();
+  const spikeGrad = ctx.createLinearGradient(cx, cy, cx, tipY);
+  spikeGrad.addColorStop(0,   color.fill);
+  spikeGrad.addColorStop(1,   color.stroke);
+  ctx.fillStyle = spikeGrad;
+  ctx.fill();
+
+  // ── Sphere head ──
+  ctx.shadowColor = "transparent";
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+
+  // Radial gradient → 3D ball look
+  const sg = ctx.createRadialGradient(
+    cx - r * 0.32, cy - r * 0.32, r * 0.04,
+    cx,            cy,             r
+  );
+  sg.addColorStop(0,    lighten(color.fill, 0.50)); // bright specular
+  sg.addColorStop(0.40, color.fill);                // true colour
+  sg.addColorStop(1,    color.stroke);              // dark rim
+  ctx.fillStyle = sg;
+  ctx.fill();
+
+  // Sphere outline
+  ctx.strokeStyle = color.stroke;
+  ctx.lineWidth   = 1.5 * size;
+  ctx.stroke();
+
+  // ── Specular glint ──
+  ctx.beginPath();
+  ctx.ellipse(
+    cx - r * 0.30, cy - r * 0.30,
+    r * 0.22, r * 0.14,
+    -Math.PI / 4, 0, Math.PI * 2
+  );
+  ctx.fillStyle = "rgba(255,255,255,0.50)";
+  ctx.fill();
+
+  // ── Centre white dot (makes it look like a pin head) ──
+  ctx.beginPath();
+  ctx.arc(cx, cy, r * 0.26, 0, Math.PI * 2);
+  ctx.fillStyle = "rgba(255,255,255,0.80)";
+  ctx.fill();
+
+  return { data: ctx.getImageData(0, 0, W, H), width: W, height: H };
+}
+
+// Simple lighten helper
+function lighten(hex, amt) {
+  const n = parseInt(hex.replace("#",""), 16);
+  const r = Math.min(255, (n>>16) + Math.round(255*amt));
+  const g = Math.min(255, ((n>>8)&0xff) + Math.round(255*amt));
+  const b = Math.min(255, (n&0xff) + Math.round(255*amt));
+  return `rgb(${r},${g},${b})`;
+}
+
+/* ─── Selected-pin popup CSS ────────────────────────────────── */
+const POPUP_CSS = `
+.fb-popup .maplibregl-popup-content {
+  background: rgba(9,13,22,0.97) !important;
+  border: 1px solid rgba(255,255,255,0.10) !important;
+  border-radius: 16px !important;
+  padding: 15px 16px 14px !important;
+  box-shadow: 0 16px 48px rgba(0,0,0,0.75) !important;
+  font-family: 'Plus Jakarta Sans', sans-serif !important;
+  min-width: 205px;
+}
+.fb-popup .maplibregl-popup-tip { display:none !important; }
+`;
+
+/* ─── Helpers ────────────────────────────────────────────────── */
+function validCoords(s) {
+  const lat = parseFloat(s.lat), lng = parseFloat(s.lng);
+  return !isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0
+    && lat >= PH_BOUNDS.minLat && lat <= PH_BOUNDS.maxLat
+    && lng >= PH_BOUNDS.minLng && lng <= PH_BOUNDS.maxLng;
+}
+
+function toGeoJSON(stations, fuelType) {
+  return {
+    type: "FeatureCollection",
+    features: stations.filter(validCoords).map((s) => ({
+      type: "Feature",
+      geometry: { type:"Point", coordinates:[parseFloat(s.lng), parseFloat(s.lat)] },
+      properties: {
+        id:       s.id,
+        name:     s.name,
+        brand:    s.brand,
+        city:     s.city    || "",
+        address:  s.address || "",
+        is_open:  s.is_open !== false,
+        category: s.price_category || "medium",
+        price:    s.display_price ?? s.prices?.[fuelType] ?? 0,
+        prices:   JSON.stringify(s.prices || {}),
+        // icon name matches what we register with addImage
+        icon: `pin-${s.price_category || "medium"}${s.is_open===false?"-closed":""}`,
+      },
+    })),
+  };
+}
+
+function buildPopupHTML(station, fuelType) {
+  const c = PRICE_COLORS[station.price_category] || PRICE_COLORS.medium;
+  const rows = ["gas91","gas95","diesel"].map((t) => {
+    const p = station.prices?.[t] ?? "—";
+    const a = t === fuelType;
+    return `<div style="text-align:center;padding:7px 5px;border-radius:8px;
+        background:${a?c.fill+"18":"rgba(255,255,255,0.04)"};
+        border:1px solid ${a?c.fill+"55":"rgba(255,255,255,0.07)"}">
+        <div style="font-size:8.5px;color:rgba(255,255,255,0.35);font-weight:700;
+          text-transform:uppercase;letter-spacing:.07em;margin-bottom:3px">
+          ${t==="gas91"?"Gas 91":t==="gas95"?"Gas 95":"Diesel"}</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:13px;
+          font-weight:700;color:${a?c.fill:"#EDF0F7"}">₱${p}</div>
+      </div>`;
+  }).join("");
+  return `
+    <div style="display:flex;align-items:center;gap:9px;margin-bottom:11px">
+      <div style="width:9px;height:9px;border-radius:50%;background:${c.fill};
+        box-shadow:0 0 8px ${c.glow};flex-shrink:0"></div>
+      <div>
+        <div style="font-size:9px;font-weight:800;text-transform:uppercase;
+          letter-spacing:.1em;color:${c.fill};line-height:1">${station.brand}</div>
+        <div style="font-size:13.5px;font-weight:800;color:#EDF0F7;
+          letter-spacing:-0.02em;line-height:1.25;margin-top:2px">
+          ${station.name.replace(station.brand+" - ","").replace(station.brand+" – ","")}</div>
+        <div style="font-size:10px;color:rgba(255,255,255,0.35);margin-top:2px">
+          ${station.city} · <span style="color:${station.is_open?"#00E5A0":"#FF4757"}">
+          ${station.is_open?"Open now":"Closed"}</span></div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">${rows}</div>`;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   Component
+═══════════════════════════════════════════════════════════ */
 export default function FuelMap({ onStationSelect }) {
-  const mapContainerRef = useRef(null);
-  const mapRef          = useRef(null);
-  const markersRef      = useRef([]);
-  const popupRef        = useRef(null);
-  const mlRef           = useRef(null); // maplibregl module
+  const containerRef = useRef(null);
+  const mapRef       = useRef(null);
+  const mlRef        = useRef(null);
+  const popupRef     = useRef(null);
+  const cssInjected  = useRef(false);
+  const stationsMap  = useRef({});
 
-  const [stations,         setStations]         = useState([]);
-  const [loading,          setLoading]           = useState(true);
-  const [error,            setError]             = useState(null);
-  const [fuelType,         setFuelType]          = useState("gas95");
-  const [filter,           setFilter]            = useState("all");
-  const [selectedStation,  setSelectedStation]   = useState(null);
-  const [mapReady,         setMapReady]          = useState(false);
+  const [stations,        setStations]        = useState([]);
+  const [loading,         setLoading]         = useState(true);
+  const [error,           setError]           = useState(null);
+  const [fuelType,        setFuelType]        = useState("gas95");
+  const [filter,          setFilter]          = useState("all");
+  const [selectedStation, setSelectedStation] = useState(null);
+  const [mapReady,        setMapReady]        = useState(false);
+  const [totalCount,      setTotalCount]      = useState(0);
 
-  /* ── Load station data ─────────────────────────────────────── */
+  /* ── Inject popup CSS once ──────────────────────────────────── */
   useEffect(() => {
-    loadStations();
-  }, [fuelType]);
+    if (cssInjected.current || typeof document === "undefined") return;
+    const tag = document.createElement("style");
+    tag.id = "fb-popup-styles";
+    tag.textContent = POPUP_CSS;
+    document.head.appendChild(tag);
+    cssInjected.current = true;
+    return () => { tag.remove(); cssInjected.current = false; };
+  }, []);
+
+  /* ── Fetch stations ─────────────────────────────────────────── */
+  useEffect(() => { loadStations(); }, [fuelType]);
 
   async function loadStations() {
     setLoading(true);
     setError(null);
     try {
       const data = await fetchFuelPrices({ fuelType });
-      setStations(data.stations || []);
+      const raw  = data.stations || [];
+      setTotalCount(raw.filter(validCoords).length);
+      setStations(raw);
     } catch {
-      setError("Could not load fuel prices — using demo data.");
-      setStations(getMockStations());
+      const mock = getMockStations();
+      setTotalCount(mock.length);
+      setStations(mock);
+      setError("Backend unreachable — showing demo data.");
     } finally {
       setLoading(false);
     }
   }
 
-  /* ── Init MapLibre GL ──────────────────────────────────────── */
+  /* ── Init MapLibre ──────────────────────────────────────────── */
   useEffect(() => {
     if (typeof window === "undefined" || mapRef.current) return;
-
     let cancelled = false;
 
     async function initMap() {
-      // Dynamically import maplibre-gl
       let ml;
       try {
-        ml = await import("maplibre-gl");
-        // maplibre-gl exports default or named
-        if (ml.default) ml = ml.default;
+        const mod = await import("maplibre-gl");
+        ml = mod.default ?? mod;
       } catch {
-        setError("MapLibre GL failed to load — make sure maplibre-gl is installed.");
+        setError("3D map failed — run: npm install maplibre-gl");
         setLoading(false);
         return;
       }
-
-      if (cancelled || !mapContainerRef.current) return;
+      if (cancelled || !containerRef.current) return;
       mlRef.current = ml;
 
+      const isMobile = window.innerWidth < 768;
+      const dpr      = Math.min(window.devicePixelRatio ?? 1, isMobile ? 1.5 : 2);
+
       const map = new ml.Map({
-        container:  mapContainerRef.current,
-        style:      MAP_STYLE,
-        center:     MAP_CENTER,
-        zoom:       MAP_ZOOM,
-        pitch:      MAP_PITCH,
-        bearing:    MAP_BEARING,
-        antialias:  true,
-        // Smooth scrolling
-        scrollZoom: { around: "cursor" },
+        container:           containerRef.current,
+        style:               MAP_STYLE,
+        center:              MAP_CENTER,
+        zoom:                MAP_ZOOM,
+        pitch:               isMobile ? 20 : MAP_PITCH,
+        bearing:             MAP_BEARING,
+        antialias:           !isMobile,
+        maxTileCacheSize:    isMobile ? 25 : 60,
+        pixelRatio:          dpr,
+        refreshExpiredTiles: false,
+        fadeDuration:        120,
       });
 
       mapRef.current = map;
 
+      map.on("error", (e) => {
+        const msg = String(e?.error?.message ?? "");
+        if (!mapRef.current?._loaded && (msg.includes("style")||msg.includes("404")||msg.includes("Failed"))) {
+          try { map.setStyle(MAP_STYLE_FALLBACK); } catch {}
+        }
+      });
+
       map.on("load", () => {
         if (cancelled) return;
 
-        /* ── 3D Building Extrusions ─────────────────────── */
-        // Only add if the style has building data
-        const layers = map.getStyle().layers;
-        const labelLayer = layers.find(
-          (l) => l.type === "symbol" && l.layout?.["text-field"]
-        );
+        // ── Register pin images (canvas-drawn, WebGL sprites) ──
+        // One per category × open/closed state = 6 images total
+        const PIN_SIZE = isMobile ? 1.5 : 2;
+        Object.entries(PRICE_COLORS).forEach(([cat, color]) => {
+          // Open pin
+          const open = drawPinImage(color, PIN_SIZE);
+          if (!map.hasImage(`pin-${cat}`)) {
+            map.addImage(`pin-${cat}`, {
+              width:  open.width,
+              height: open.height,
+              data:   open.data.data,
+            });
+          }
+          // Closed pin (desaturated)
+          const closedColor = {
+            fill:   "#3a3f52",
+            stroke: "#1e2230",
+            text:   "#8b90a8",
+            glow:   "rgba(58,63,82,0.4)",
+          };
+          const closed = drawPinImage(closedColor, PIN_SIZE * 0.75);
+          if (!map.hasImage(`pin-${cat}-closed`)) {
+            map.addImage(`pin-${cat}-closed`, {
+              width:  closed.width,
+              height: closed.height,
+              data:   closed.data.data,
+            });
+          }
+        });
 
-        if (map.getSource("composite") || map.getSource("openmaptiles")) {
-          const buildingSource = map.getSource("composite") ? "composite" : "openmaptiles";
-          map.addLayer(
-            {
-              id:     "3d-buildings",
-              source: buildingSource,
-              "source-layer": "building",
-              filter: ["==", "extrude", "true"],
-              type:   "fill-extrusion",
-              minzoom: 12,
-              paint: {
-                "fill-extrusion-color":   "#1a1f2e",
-                "fill-extrusion-height":  ["interpolate", ["linear"], ["zoom"], 12, 0, 14, ["get", "height"]],
-                "fill-extrusion-base":    ["interpolate", ["linear"], ["zoom"], 12, 0, 14, ["get", "min_height"]],
-                "fill-extrusion-opacity": 0.75,
-              },
-            },
-            labelLayer?.id
-          );
+        // ── GeoJSON source ──
+        map.addSource(SRC_ID, {
+          type:           "geojson",
+          data:           { type:"FeatureCollection", features:[] },
+          cluster: false,  // show every station as individual pin
+        });
+
+        // ── Pin symbols (individual stations) ──
+        map.addLayer({
+          id:      LAYER_PINS,
+          type:    "symbol",
+          source:  SRC_ID,
+
+          layout: {
+            // Use the icon name stored in the feature properties
+            "icon-image":           ["get","icon"],
+            "icon-size":            [
+              "interpolate",["linear"],["zoom"],
+              10, 0.45,
+              13, 0.60,
+              15, 0.80,
+              17, 1.00,
+            ],
+            // Anchor at bottom so the tip sits exactly on the coordinate
+            "icon-anchor":          "bottom",
+            "icon-allow-overlap":   true,
+            "icon-ignore-placement": false,
+            // Price label above pin
+            "text-field":           [
+              "concat","₱",
+              ["to-string",["round",["get","price"]]]
+            ],
+            "text-font":            ["Open Sans Bold","Arial Unicode MS Bold"],
+            "text-size":            [
+              "interpolate",["linear"],["zoom"],
+              11, 0,     // hidden at low zoom
+              12, 10,
+              14, 12,
+              16, 13,
+            ],
+            "text-anchor":          "bottom",
+            "text-offset":          [0, -2.8],
+            "text-allow-overlap":   false,
+            "text-optional":        true,
+          },
+          paint: {
+            // Price label colour matches pin category
+            "text-color": [
+              "match",["get","category"],
+              "cheap",     "#00E5A0",
+              "expensive",  "#FF4757",
+              "#FFD166"
+            ],
+            "text-halo-color": "rgba(8,11,16,0.90)",
+            "text-halo-width": 2,
+            // Fade closed stations
+            "icon-opacity":  ["case",["==",["get","is_open"],false], 0.45, 1.0],
+            "text-opacity":  ["case",["==",["get","is_open"],false], 0.45, 1.0],
+          },
+        });
+
+        // ── Selected-station pulse ring ──
+        map.addLayer({
+          id:     LAYER_SELECTED,
+          type:   "circle",
+          source: SRC_ID,
+          filter: ["==","id","__none__"],
+          paint: {
+            "circle-radius": [
+              "interpolate",["linear"],["zoom"],
+              10,22, 14,28, 16,36
+            ],
+            "circle-color":          "transparent",
+            "circle-stroke-width":   3,
+            "circle-stroke-color": [
+              "match",["get","category"],
+              "cheap","#00E5A0","expensive","#FF4757","#FFD166"
+            ],
+            "circle-stroke-opacity": 0.9,
+          },
+        });
+
+        // ── 3D buildings (desktop only) ──
+        if (!isMobile) {
+          const labelLayerId = map.getStyle()?.layers
+            ?.find((l)=>l.type==="symbol"&&l.layout?.["text-field"])?.id;
+          const srcId = ["openmaptiles","stamen","composite","carto"]
+            .find((id)=>map.getSource(id));
+          if (srcId) {
+            try {
+              map.addLayer({
+                id:"3d-buildings", source:srcId,
+                "source-layer":"building", type:"fill-extrusion", minzoom:13,
+                paint:{
+                  "fill-extrusion-color":"#161b2a",
+                  "fill-extrusion-height":  ["interpolate",["linear"],["zoom"],13,0,16,["get","render_height"]],
+                  "fill-extrusion-base":    ["interpolate",["linear"],["zoom"],13,0,16,["get","render_min_height"]],
+                  "fill-extrusion-opacity": 0.78,
+                },
+              }, labelLayerId);
+            } catch {}
+          }
         }
 
-        /* ── Atmospheric fog ────────────────────────────── */
-        if (map.setFog) {
-          map.setFog({
-            color:            "rgba(10, 14, 22, 0.9)",
-            "high-color":     "rgba(20, 28, 44, 0.8)",
-            "horizon-blend":  0.06,
-            "space-color":    "#050709",
-            "star-intensity": 0.0,
-          });
+        // ── Click: individual pin ──
+        map.on("click", LAYER_PINS, (e) => {
+          const props = e.features?.[0]?.properties;
+          if (!props) return;
+          const station = stationsMap.current[props.id];
+          if (station) handleStationClick(station, ml, map);
+        });
+
+        // ── Cursors ──
+        [LAYER_PINS].forEach((l) => {
+          map.on("mouseenter", l, () => { map.getCanvas().style.cursor = "pointer"; });
+          map.on("mouseleave", l, () => { map.getCanvas().style.cursor = ""; });
+        });
+
+        map.addControl(
+          new ml.NavigationControl({ showCompass:!isMobile, visualizePitch:true }),
+          "top-right"
+        );
+        if (!isMobile) {
+          map.addControl(new ml.ScaleControl({ maxWidth:80, unit:"metric" }), "bottom-right");
         }
 
         setMapReady(true);
       });
-
-      map.addControl(
-        new ml.NavigationControl({ showCompass: true, visualizePitch: true }),
-        "top-right"
-      );
-
-      map.addControl(
-        new ml.ScaleControl({ maxWidth: 100, unit: "metric" }),
-        "bottom-right"
-      );
     }
 
     initMap();
-
     return () => {
       cancelled = true;
-      if (mapRef.current) {
-        mapRef.current.remove();
-        mapRef.current = null;
-      }
+      if (popupRef.current) { popupRef.current.remove(); popupRef.current = null; }
+      if (mapRef.current)   { mapRef.current.remove();   mapRef.current = null; }
     };
   }, []);
 
-  /* ── Render custom 3D spike markers ───────────────────────── */
-  const renderMarkers = useCallback(() => {
+  /* ── Update GeoJSON source ──────────────────────────────────── */
+  const updateSource = useCallback(() => {
     const map = mapRef.current;
-    const ml  = mlRef.current;
-    if (!map || !ml || !mapReady) return;
+    if (!map || !mapReady || stations.length === 0) return;
 
-    // Clear previous markers
-    markersRef.current.forEach((m) => m.remove());
-    markersRef.current = [];
-    if (popupRef.current) { popupRef.current.remove(); popupRef.current = null; }
+    const lookup = {};
+    stations.filter(validCoords).forEach((s) => { lookup[s.id] = s; });
+    stationsMap.current = lookup;
 
-    const filtered = filter === "all"
+    const visible = filter === "all"
       ? stations
       : stations.filter((s) => s.price_category === filter);
 
-    filtered.forEach((station) => {
-      const cat    = station.price_category || "medium";
-      const colors = PRICE_COLORS[cat] || PRICE_COLORS.medium;
-      const price  = station.display_price || station.prices?.[fuelType] || "—";
+    const src = map.getSource(SRC_ID);
+    if (src) src.setData(toGeoJSON(visible, fuelType));
+  }, [stations, filter, fuelType, mapReady]);
 
-      // Build a rich custom marker element
-      const el = document.createElement("div");
-      el.className   = "fb-marker";
-      el.style.cssText = `
-        position: relative;
-        cursor: pointer;
-        width: 56px;
-        transform-origin: bottom center;
-        animation: markerRise 0.55s cubic-bezier(0.34,1.3,0.64,1) both;
-        animation-delay: ${Math.random() * 0.3}s;
-        filter: drop-shadow(0 6px 12px ${colors.glow});
-        transition: filter 0.2s, transform 0.2s;
-      `;
+  useEffect(() => { updateSource(); }, [updateSource]);
 
-      el.innerHTML = `
-        <style>
-          @keyframes markerRise {
-            from { transform: scaleY(0) translateY(20px); opacity:0; }
-            to   { transform: scaleY(1) translateY(0);    opacity:1; }
-          }
-          @keyframes markerFloat {
-            0%,100% { transform: translateY(0px); }
-            50%      { transform: translateY(-4px); }
-          }
-          .fb-marker:hover { transform: scale(1.15) !important; filter: drop-shadow(0 10px 20px ${colors.glow}) !important; z-index:999 !important; }
-          .fb-marker-pin {
-            display: flex; flex-direction: column; align-items: center;
-          }
-          .fb-marker-label {
-            background: rgba(8,11,16,0.92);
-            backdrop-filter: blur(12px);
-            border: 1px solid ${colors.fill}55;
-            border-radius: 10px;
-            padding: 5px 8px 4px;
-            text-align: center;
-            min-width: 54px;
-            box-shadow: 0 4px 16px rgba(0,0,0,0.5), 0 0 0 1px ${colors.fill}22;
-          }
-          .fb-marker-price {
-            font-family: 'JetBrains Mono', 'Courier New', monospace;
-            font-size: 11px; font-weight: 700;
-            color: ${colors.fill};
-            line-height: 1;
-            letter-spacing: -0.03em;
-          }
-          .fb-marker-name {
-            font-family: 'Plus Jakarta Sans', sans-serif;
-            font-size: 8.5px; font-weight: 600;
-            color: rgba(255,255,255,0.55);
-            white-space: nowrap; overflow: hidden;
-            text-overflow: ellipsis; max-width: 52px;
-            margin-top: 2px; line-height: 1;
-          }
-          .fb-marker-spike {
-            width: 2px;
-            height: 22px;
-            background: linear-gradient(to bottom, ${colors.fill}, transparent);
-            border-radius: 1px;
-          }
-          .fb-marker-dot {
-            width: 10px; height: 10px;
-            border-radius: 50%;
-            background: ${colors.fill};
-            box-shadow: 0 0 12px ${colors.glow}, 0 0 4px ${colors.fill};
-            border: 2px solid rgba(255,255,255,0.9);
-            animation: markerFloat 2.8s ease-in-out infinite;
-            animation-delay: ${Math.random() * 2}s;
-          }
-        </style>
-        <div class="fb-marker-pin">
-          <div class="fb-marker-label">
-            <div class="fb-marker-price">₱${price}</div>
-            <div class="fb-marker-name">${station.brand}</div>
-          </div>
-          <div class="fb-marker-spike"></div>
-          <div class="fb-marker-dot"></div>
-        </div>
-      `;
+  /* ── Station click ──────────────────────────────────────────── */
+  function handleStationClick(station, ml, map) {
+    setSelectedStation(station);
+    if (onStationSelect) onStationSelect(station);
 
-      // Click → show popup + detail panel
-      el.addEventListener("click", (e) => {
-        e.stopPropagation();
-        setSelectedStation(station);
-        if (onStationSelect) onStationSelect(station);
+    const c   = PRICE_COLORS[station.price_category] || PRICE_COLORS.medium;
+    const lng = parseFloat(station.lng);
+    const lat = parseFloat(station.lat);
 
-        // Fly to station with cinematic tilt
-        map.flyTo({
-          center:   [station.lng, station.lat],
-          zoom:     14,
-          pitch:    60,
-          bearing:  Math.random() * 30 - 15,
-          duration: 1200,
-          essential: true,
-        });
+    // Show selection ring on GL layer
+    map.setFilter(LAYER_SELECTED, ["==","id", station.id]);
 
-        // Rich popup
-        if (popupRef.current) popupRef.current.remove();
-        popupRef.current = new ml.Popup({
-          offset:    [0, -70],
-          className: "fb-popup",
-          closeButton: false,
-          maxWidth:  "220px",
-        })
-          .setLngLat([station.lng, station.lat])
-          .setHTML(`
-            <style>
-              .fb-popup .maplibregl-popup-content {
-                background: rgba(10,14,22,0.95) !important;
-                backdrop-filter: blur(24px) !important;
-                border: 1px solid rgba(255,255,255,0.12) !important;
-                border-radius: 14px !important;
-                padding: 14px 16px !important;
-                box-shadow: 0 12px 40px rgba(0,0,0,0.6) !important;
-                font-family: 'Plus Jakarta Sans', sans-serif !important;
-              }
-              .fb-popup .maplibregl-popup-tip { display:none !important; }
-            </style>
-            <div style="margin-bottom:2px; font-size:9px; font-weight:800; text-transform:uppercase; letter-spacing:.1em; color:${colors.fill}">
-              ${station.brand}
-            </div>
-            <div style="font-size:14px; font-weight:800; color:#EDF0F7; margin-bottom:2px; letter-spacing:-0.02em; line-height:1.2">
-              ${station.name.replace(station.brand + " - ", "")}
-            </div>
-            <div style="font-size:10px; color:rgba(255,255,255,0.38); margin-bottom:12px">
-              ${station.city || ""} · ${station.is_open ? "Open" : "Closed"}
-            </div>
-            <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px">
-              ${["gas91","gas95","diesel"].map((t) => {
-                const p = station.prices?.[t];
-                const active = t === fuelType;
-                return `
-                  <div style="text-align:center; padding:7px 4px; border-radius:8px;
-                    background:${active ? colors.fill + "18" : "rgba(255,255,255,0.04)"};
-                    border:1px solid ${active ? colors.fill + "44" : "rgba(255,255,255,0.07)"}">
-                    <div style="font-size:8px; color:rgba(255,255,255,0.38); font-weight:700; text-transform:uppercase; letter-spacing:.06em; margin-bottom:3px">
-                      ${t === "gas91" ? "91" : t === "gas95" ? "95" : "DSL"}
-                    </div>
-                    <div style="font-family:'JetBrains Mono',monospace; font-size:12px; font-weight:700; color:${active ? colors.fill : "#EDF0F7"}">
-                      ₱${p || "—"}
-                    </div>
-                  </div>`;
-              }).join("")}
-            </div>
-          `)
-          .addTo(map);
-      });
-
-      const marker = new ml.Marker({ element: el, anchor: "bottom" })
-        .setLngLat([station.lng, station.lat])
-        .addTo(map);
-
-      markersRef.current.push(marker);
+    map.flyTo({
+      center:[lng, lat], zoom:15.5,
+      pitch:55, bearing:(Math.random()*20)-10,
+      duration:900, essential:true,
     });
-  }, [stations, filter, fuelType, mapReady, onStationSelect]);
 
-  // Re-render markers whenever data or filters change
-  useEffect(() => {
-    renderMarkers();
-  }, [renderMarkers]);
+    if (popupRef.current) popupRef.current.remove();
+    popupRef.current = new ml.Popup({
+      offset:[0, -78], className:"fb-popup",
+      closeButton:false, maxWidth:"230px",
+    })
+      .setLngLat([lng, lat])
+      .setHTML(buildPopupHTML(station, fuelType))
+      .addTo(map);
+  }
 
-  /* ── Close detail panel → reset map view ──────────────────── */
+  /* ── Close panel ────────────────────────────────────────────── */
   function closeDetail() {
     setSelectedStation(null);
     if (popupRef.current) { popupRef.current.remove(); popupRef.current = null; }
     if (mapRef.current) {
+      mapRef.current.setFilter(LAYER_SELECTED, ["==","id","__none__"]);
       mapRef.current.flyTo({
-        center:   MAP_CENTER,
-        zoom:     MAP_ZOOM,
-        pitch:    MAP_PITCH,
-        bearing:  MAP_BEARING,
-        duration: 1000,
+        center:MAP_CENTER, zoom:MAP_ZOOM,
+        pitch:MAP_PITCH, bearing:MAP_BEARING, duration:800,
       });
     }
   }
 
-  /* ── Derived stats ─────────────────────────────────────────── */
-  const cheapestStation = stations
-    .filter((s) => s.is_open)
-    .sort((a, b) => (a.display_price || 99) - (b.display_price || 99))[0];
+  /* ── Derived ────────────────────────────────────────────────── */
+  const cheapest = stations
+    .filter((s) => s.is_open && validCoords(s))
+    .sort((a,b) => (a.display_price||99)-(b.display_price||99))[0];
 
-  const filteredCount = filter === "all"
-    ? stations.length
-    : stations.filter((s) => s.price_category === filter).length;
+  const visibleCount = filter === "all"
+    ? totalCount
+    : stations.filter((s) => s.price_category===filter && validCoords(s)).length;
 
-  /* ── Render ────────────────────────────────────────────────── */
+  /* ── JSX ────────────────────────────────────────────────────── */
   return (
     <div className={styles.container}>
 
-      {/* Controls Bar */}
+      {/* Controls */}
       <div className={styles.controls}>
         <div className={styles.controlsLeft}>
           <div className={styles.fuelSelector}>
             {FUEL_TYPES.map((ft) => (
-              <button
-                key={ft.value}
+              <button key={ft.value}
                 onClick={() => setFuelType(ft.value)}
-                className={`${styles.fuelBtn} ${fuelType === ft.value ? styles.fuelBtnActive : ""}`}
-              >
+                className={`${styles.fuelBtn} ${fuelType===ft.value?styles.fuelBtnActive:""}`}>
                 {ft.label}
               </button>
             ))}
           </div>
-
           <div className={styles.filterBtns}>
             {[
-              { id: "all",       label: "All" },
-              { id: "cheap",     label: "🟢 Cheap" },
-              { id: "medium",    label: "🟡 Mid" },
-              { id: "expensive", label: "🔴 Pricey" },
+              {id:"all",       label:"All"},
+              {id:"cheap",     label:"🟢 Cheap"},
+              {id:"medium",    label:"🟡 Mid"},
+              {id:"expensive", label:"🔴 Pricey"},
             ].map((f) => (
-              <button
-                key={f.id}
+              <button key={f.id}
                 onClick={() => setFilter(f.id)}
-                className={`${styles.filterBtn} ${filter === f.id ? styles.filterBtnActive : ""}`}
-              >
+                className={`${styles.filterBtn} ${filter===f.id?styles.filterBtnActive:""}`}>
                 {f.label}
               </button>
             ))}
@@ -402,36 +560,31 @@ export default function FuelMap({ onStationSelect }) {
         </div>
 
         <div className={styles.controlsRight}>
-          {cheapestStation && (
+          {cheapest && (
             <div className={styles.cheapestBadge}>
               <span className={styles.cheapestLabel}>🏆 Cheapest</span>
-              <span className={styles.cheapestName}>
-                {cheapestStation.city || cheapestStation.name}
-              </span>
-              <span className={styles.cheapestPrice}>
-                {formatPeso(cheapestStation.display_price)}/L
-              </span>
+              <span className={styles.cheapestName}>{cheapest.city||cheapest.brand}</span>
+              <span className={styles.cheapestPrice}>{formatPeso(cheapest.display_price)}/L</span>
             </div>
           )}
-          <span className={styles.count}>{filteredCount} stations</span>
+          <span className={styles.count}>{visibleCount.toLocaleString()} stations</span>
           {loading && <span className="spinner" />}
         </div>
       </div>
 
-      {/* 3D Map */}
+      {/* Map */}
       <div className={styles.mapWrapper}>
-        <div ref={mapContainerRef} className={styles.map} />
+        <div ref={containerRef} className={styles.map} />
 
-        {/* Legend */}
         <div className={styles.legend}>
           <div className={styles.legendTitle}>Price Level</div>
           {[
-            { color: "#00E5A0", label: "Cheap" },
-            { color: "#FFD166", label: "Average" },
-            { color: "#FF4757", label: "Expensive" },
+            {color:"#00E5A0",label:"Cheap"},
+            {color:"#FFD166",label:"Average"},
+            {color:"#FF4757",label:"Expensive"},
           ].map((item) => (
             <div key={item.label} className={styles.legendItem}>
-              <span className={styles.legendDot} style={{ background: item.color, color: item.color }} />
+              <span className={styles.legendDot} style={{background:item.color,color:item.color}}/>
               {item.label}
             </div>
           ))}
@@ -439,62 +592,50 @@ export default function FuelMap({ onStationSelect }) {
 
         {error && <div className={styles.errorBanner}>⚠ {error}</div>}
 
-        {/* Loading overlay */}
-        {loading && !mapReady && (
+        {!mapReady && (
           <div style={{
-            position: "absolute", inset: 0, zIndex: 500,
-            background: "rgba(8,11,16,0.75)",
-            backdropFilter: "blur(12px)",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            gap: 12, color: "rgba(255,255,255,0.6)", fontSize: "0.88rem",
-            fontFamily: "var(--font-body)",
+            position:"absolute",inset:0,zIndex:500,
+            background:"rgba(8,11,16,0.88)",
+            display:"flex",alignItems:"center",justifyContent:"center",
+            gap:12,color:"rgba(255,255,255,0.5)",
+            fontSize:"0.86rem",fontFamily:"var(--font-body)",
           }}>
-            <span className="spinner" /> Loading fuel stations…
+            <span className="spinner"/> Initialising 3D map…
           </div>
         )}
       </div>
 
-      {/* Station detail panel */}
+      {/* Detail panel */}
       {selectedStation && (
         <div className={`${styles.detailPanel} animate-fadeIn`}>
           <button className={styles.closeBtn} onClick={closeDetail}>✕</button>
-
-          <div
-            className={styles.detailBrand}
-            style={{ color: PRICE_COLORS[selectedStation.price_category]?.fill || "var(--amber)" }}
-          >
+          <div className={styles.detailBrand}
+            style={{color:PRICE_COLORS[selectedStation.price_category]?.fill||"var(--amber)"}}>
             {selectedStation.brand}
           </div>
           <div className={styles.detailName}>{selectedStation.name}</div>
           <div className={styles.detailAddress}>{selectedStation.address}</div>
-
           <div className={styles.priceGrid}>
-            {Object.entries(selectedStation.prices || {}).map(([type, price]) => (
-              <div
-                key={type}
-                className={`${styles.priceCard} ${type === fuelType ? styles.priceCardActive : ""}`}
-              >
+            {Object.entries(selectedStation.prices||{}).map(([type,price]) => (
+              <div key={type}
+                className={`${styles.priceCard} ${type===fuelType?styles.priceCardActive:""}`}>
                 <span className={styles.priceType}>
-                  {type === "gas91" ? "Gas 91" : type === "gas95" ? "Gas 95" : "Diesel"}
+                  {type==="gas91"?"Gas 91":type==="gas95"?"Gas 95":"Diesel"}
                 </span>
-                <span className={`${styles.priceValue} ${type === fuelType ? styles.priceCardActive : ""}`}>
-                  ₱{price}
-                </span>
+                <span className={styles.priceValue}>₱{price}</span>
                 <span className={styles.priceUnit}>/L</span>
               </div>
             ))}
           </div>
-
           <div className={styles.detailMeta}>
             <span className={`badge ${
-              selectedStation.price_category === "cheap"     ? "badge-cheap"     :
-              selectedStation.price_category === "expensive" ? "badge-expensive" : "badge-medium"
-            }`}>
-              {selectedStation.price_category === "cheap"     ? "✓ Best Price"    :
-               selectedStation.price_category === "expensive" ? "↑ Higher Price"  : "≈ Average"}
+              selectedStation.price_category==="cheap"    ?"badge-cheap":
+              selectedStation.price_category==="expensive"?"badge-expensive":"badge-medium"}`}>
+              {selectedStation.price_category==="cheap"    ?"✓ Best Price":
+               selectedStation.price_category==="expensive"?"↑ Higher Price":"≈ Average"}
             </span>
-            <span className={`badge ${selectedStation.is_open ? "badge-cheap" : "badge-expensive"}`}>
-              {selectedStation.is_open ? "● Open Now" : "● Closed"}
+            <span className={`badge ${selectedStation.is_open?"badge-cheap":"badge-expensive"}`}>
+              {selectedStation.is_open?"● Open Now":"● Closed"}
             </span>
           </div>
         </div>
@@ -503,18 +644,20 @@ export default function FuelMap({ onStationSelect }) {
   );
 }
 
-/* ── Fallback mock data ─────────────────────────────────────── */
+/* ─── Mock data ─────────────────────────────────────────────── */
 function getMockStations() {
   return [
-    { id:1,  name:"Petron - EDSA Magallanes", brand:"Petron", lat:14.5547, lng:121.0244, city:"Makati",     prices:{gas91:56.20,gas95:60.15,diesel:52.10}, display_price:60.15, price_category:"expensive", is_open:true,  address:"EDSA cor. Magallanes Ave" },
-    { id:2,  name:"Shell - Alabang",          brand:"Shell",  lat:14.4195, lng:121.0438, city:"Muntinlupa", prices:{gas91:55.80,gas95:59.75,diesel:51.90}, display_price:59.75, price_category:"medium",    is_open:true,  address:"Alabang-Zapote Rd" },
-    { id:3,  name:"Caltex - Laguna Blvd",    brand:"Caltex", lat:14.2717, lng:121.4115, city:"Calamba",    prices:{gas91:54.50,gas95:58.30,diesel:50.75}, display_price:58.30, price_category:"medium",    is_open:true,  address:"National Hwy, Calamba" },
-    { id:4,  name:"Phoenix - Sta. Rosa",     brand:"Phoenix",lat:14.2872, lng:121.0862, city:"Sta. Rosa",  prices:{gas91:53.90,gas95:57.80,diesel:50.20}, display_price:57.80, price_category:"cheap",     is_open:true,  address:"Sta. Rosa-Tagaytay Rd" },
-    { id:5,  name:"Seaoil - Los Baños",      brand:"Seaoil", lat:14.1665, lng:121.2419, city:"Los Baños",  prices:{gas91:53.20,gas95:56.95,diesel:49.60}, display_price:56.95, price_category:"cheap",     is_open:true,  address:"National Hwy, Los Baños" },
-    { id:6,  name:"Petron - Quezon Ave",     brand:"Petron", lat:14.6372, lng:121.0014, city:"QC",         prices:{gas91:56.50,gas95:60.45,diesel:52.30}, display_price:60.45, price_category:"expensive", is_open:true,  address:"Quezon Ave, QC" },
-    { id:7,  name:"Shell - C5 Road",         brand:"Shell",  lat:14.5764, lng:121.0734, city:"Taguig",     prices:{gas91:56.10,gas95:60.00,diesel:52.00}, display_price:60.00, price_category:"expensive", is_open:true,  address:"C5 Road, Taguig" },
-    { id:8,  name:"Unioil - Biñan",          brand:"Unioil", lat:14.3404, lng:121.0797, city:"Biñan",      prices:{gas91:53.50,gas95:57.20,diesel:49.90}, display_price:57.20, price_category:"cheap",     is_open:true,  address:"National Hwy, Biñan" },
-    { id:9,  name:"Phoenix - Pasig",         brand:"Phoenix",lat:14.5764, lng:121.0851, city:"Pasig",      prices:{gas91:55.00,gas95:58.90,diesel:51.10}, display_price:58.90, price_category:"medium",    is_open:true,  address:"Ortigas Ave, Pasig" },
-    { id:10, name:"Petron - Bacoor",         brand:"Petron", lat:14.4590, lng:120.9610, city:"Bacoor",     prices:{gas91:55.40,gas95:59.30,diesel:51.50}, display_price:59.30, price_category:"medium",    is_open:true,  address:"Aguinaldo Hwy, Bacoor" },
+    {id:1,  name:"Petron - EDSA Magallanes",brand:"Petron", lat:14.5547,lng:121.0244,city:"Makati",    prices:{gas91:56.20,gas95:60.15,diesel:52.10},display_price:60.15,price_category:"expensive",is_open:true, address:"EDSA cor. Magallanes Ave"},
+    {id:2,  name:"Shell - Alabang",         brand:"Shell",  lat:14.4195,lng:121.0438,city:"Muntinlupa",prices:{gas91:55.80,gas95:59.75,diesel:51.90},display_price:59.75,price_category:"medium",    is_open:true, address:"Alabang-Zapote Rd"},
+    {id:3,  name:"Caltex - Laguna Blvd",    brand:"Caltex", lat:14.2717,lng:121.4115,city:"Calamba",   prices:{gas91:54.50,gas95:58.30,diesel:50.75},display_price:58.30,price_category:"medium",    is_open:true, address:"National Hwy, Calamba"},
+    {id:4,  name:"Phoenix - Sta. Rosa",     brand:"Phoenix",lat:14.2872,lng:121.0862,city:"Sta. Rosa", prices:{gas91:53.90,gas95:57.80,diesel:50.20},display_price:57.80,price_category:"cheap",     is_open:true, address:"Sta. Rosa-Tagaytay Rd"},
+    {id:5,  name:"Seaoil - Los Baños",      brand:"Seaoil", lat:14.1665,lng:121.2419,city:"Los Baños", prices:{gas91:53.20,gas95:56.95,diesel:49.60},display_price:56.95,price_category:"cheap",     is_open:true, address:"National Hwy, Los Baños"},
+    {id:6,  name:"Petron - Quezon Ave",     brand:"Petron", lat:14.6372,lng:121.0014,city:"QC",        prices:{gas91:56.50,gas95:60.45,diesel:52.30},display_price:60.45,price_category:"expensive",is_open:true, address:"Quezon Ave, QC"},
+    {id:7,  name:"Shell - C5 Road",         brand:"Shell",  lat:14.5764,lng:121.0734,city:"Taguig",    prices:{gas91:56.10,gas95:60.00,diesel:52.00},display_price:60.00,price_category:"expensive",is_open:true, address:"C5 Road, Taguig"},
+    {id:8,  name:"Unioil - Biñan",          brand:"Unioil", lat:14.3404,lng:121.0797,city:"Biñan",     prices:{gas91:53.50,gas95:57.20,diesel:49.90},display_price:57.20,price_category:"cheap",     is_open:true, address:"National Hwy, Biñan"},
+    {id:9,  name:"Phoenix - Pasig",         brand:"Phoenix",lat:14.5764,lng:121.0851,city:"Pasig",     prices:{gas91:55.00,gas95:58.90,diesel:51.10},display_price:58.90,price_category:"medium",    is_open:true, address:"Ortigas Ave, Pasig"},
+    {id:10, name:"Petron - Bacoor",         brand:"Petron", lat:14.4590,lng:120.9610,city:"Bacoor",    prices:{gas91:55.40,gas95:59.30,diesel:51.50},display_price:59.30,price_category:"medium",    is_open:true, address:"Aguinaldo Hwy, Bacoor"},
+    {id:11, name:"Shell - Pasay",           brand:"Shell",  lat:14.5386,lng:121.0005,city:"Pasay",     prices:{gas91:56.30,gas95:60.25,diesel:52.20},display_price:60.25,price_category:"expensive",is_open:true, address:"Taft Ave, Pasay"},
+    {id:12, name:"Caltex - Manila North",   brand:"Caltex", lat:14.6507,lng:120.9839,city:"Manila",    prices:{gas91:55.60,gas95:59.55,diesel:51.70},display_price:59.55,price_category:"medium",    is_open:false,address:"Espana Blvd, Manila"},
   ];
 }
