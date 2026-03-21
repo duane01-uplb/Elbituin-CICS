@@ -303,5 +303,3 @@ MIT License — free to use, modify, and distribute.
 - All Filipino tricycle and jeepney drivers who inspired this project
 
 ---
-
-*Built in 72 hours for the FuelBridge Hackathon 🇵🇭*
