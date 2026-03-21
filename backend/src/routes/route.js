@@ -11,7 +11,6 @@ const VEHICLE_CONSUMPTION = {
   default: 8.0,
 };
  
-// OSRM public API — free, no API key, uses OpenStreetMap road network
 const OSRM_BASE = "https://router.project-osrm.org/route/v1/driving";
  
 function haversineDistance(lat1, lng1, lat2, lng2) {
