@@ -26,6 +26,7 @@
 
   transition: width 0.25s cubic-bezier(0.25,0.46,0.45,0.94);
   overflow: hidden;
+  overflow-x: hidden; /* prevent horizontal scroll during collapse animation */
 }
 
 .sidebarCollapsed {
@@ -91,27 +92,34 @@
   text-transform: uppercase;
 }
 
-/* ── Collapse Button ───────────────────────────────────────── */
+/* ── Collapse Button ─────────────────────────────────────────
+   Fixed: removed position: absolute + right: -12px which caused
+   clipping. Now sits in normal flow aligned to the right edge.
+   ─────────────────────────────────────────────────────────── */
 .collapseBtn {
-  position: absolute;
-  top: 22px;
-  right: -12px;
-  width: 24px;
-  height: 24px;
+  align-self: flex-end;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   background: var(--space-4);
   border: 1px solid rgba(255,255,255,0.12);
   color: var(--text-secondary);
-  font-size: 0.85rem;
+  font-size: 0.9rem;
   font-weight: 700;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 10;
+  flex-shrink: 0;
+  margin-bottom: 4px;
   transition: var(--ease-smooth);
   box-shadow: var(--shadow-sm);
   line-height: 1;
+}
+
+/* When collapsed, center the button */
+.sidebarCollapsed .collapseBtn {
+  align-self: center;
 }
 
 .collapseBtn:hover {
@@ -148,6 +156,12 @@
   overflow: hidden;
   text-align: left;
   width: 100%;
+}
+
+/* Collapsed state: center icon */
+.sidebarCollapsed .tab {
+  justify-content: center;
+  padding: 11px 0;
 }
 
 .tab:hover {

@@ -2,7 +2,6 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { fetchFuelPrices, formatPeso } from "../lib/api";
 import styles from "./FuelMap.module.css";
 
-/* ─── Constants ─────────────────────────────────────────────── */
 const FUEL_TYPES = [
   { value: "gas91",  label: "Gas 91"  },
   { value: "gas95",  label: "Gas 95"  },
@@ -28,92 +27,6 @@ const SRC_ID         = "fb-stations";
 const LAYER_PINS     = "fb-pins";
 const LAYER_SELECTED = "fb-selected-ring";
 
-/* ─── Draw a realistic map pin: circle head + sharp spike ───── */
-// Canvas 40×58px. Anchor = bottom centre (spike tip).
-function drawPinImage(color, size = 2) {
-  const W    = 40 * size;
-  const H    = 58 * size;
-  const cx   = W / 2;
-  const r    = 14 * size;        // sphere radius
-  const cy   = r + 3 * size;     // sphere centre (with top padding)
-  const tipY = H - 1 * size;     // sharp spike tip
-
-  const canvas = document.createElement("canvas");
-  canvas.width  = W;
-  canvas.height = H;
-  const ctx = canvas.getContext("2d");
-
-  // ── Pin shadow ──
-  ctx.shadowColor   = "rgba(0,0,0,0.65)";
-  ctx.shadowBlur    = 7 * size;
-  ctx.shadowOffsetX = 1 * size;
-  ctx.shadowOffsetY = 4 * size;
-
-  // ── Spike body (triangle from circle bottom to sharp tip) ──
-  const sw = 5.5 * size; // half-width at spike base
-  ctx.beginPath();
-  ctx.moveTo(cx - sw, cy + r * 0.65);
-  ctx.lineTo(cx,      tipY);
-  ctx.lineTo(cx + sw, cy + r * 0.65);
-  // close with arc across the bottom of the sphere
-  ctx.arc(cx, cy, r, Math.PI * 0.74, Math.PI * 0.26, true);
-  ctx.closePath();
-  const spikeGrad = ctx.createLinearGradient(cx, cy, cx, tipY);
-  spikeGrad.addColorStop(0,   color.fill);
-  spikeGrad.addColorStop(1,   color.stroke);
-  ctx.fillStyle = spikeGrad;
-  ctx.fill();
-
-  // ── Sphere head ──
-  ctx.shadowColor = "transparent";
-  ctx.beginPath();
-  ctx.arc(cx, cy, r, 0, Math.PI * 2);
-
-  // Radial gradient → 3D ball look
-  const sg = ctx.createRadialGradient(
-    cx - r * 0.32, cy - r * 0.32, r * 0.04,
-    cx,            cy,             r
-  );
-  sg.addColorStop(0,    lighten(color.fill, 0.50)); // bright specular
-  sg.addColorStop(0.40, color.fill);                // true colour
-  sg.addColorStop(1,    color.stroke);              // dark rim
-  ctx.fillStyle = sg;
-  ctx.fill();
-
-  // Sphere outline
-  ctx.strokeStyle = color.stroke;
-  ctx.lineWidth   = 1.5 * size;
-  ctx.stroke();
-
-  // ── Specular glint ──
-  ctx.beginPath();
-  ctx.ellipse(
-    cx - r * 0.30, cy - r * 0.30,
-    r * 0.22, r * 0.14,
-    -Math.PI / 4, 0, Math.PI * 2
-  );
-  ctx.fillStyle = "rgba(255,255,255,0.50)";
-  ctx.fill();
-
-  // ── Centre white dot (makes it look like a pin head) ──
-  ctx.beginPath();
-  ctx.arc(cx, cy, r * 0.26, 0, Math.PI * 2);
-  ctx.fillStyle = "rgba(255,255,255,0.80)";
-  ctx.fill();
-
-  return { data: ctx.getImageData(0, 0, W, H), width: W, height: H };
-}
-
-// Simple lighten helper
-function lighten(hex, amt) {
-  const n = parseInt(hex.replace("#",""), 16);
-  const r = Math.min(255, (n>>16) + Math.round(255*amt));
-  const g = Math.min(255, ((n>>8)&0xff) + Math.round(255*amt));
-  const b = Math.min(255, (n&0xff) + Math.round(255*amt));
-  return `rgb(${r},${g},${b})`;
-}
-
-/* ─── Selected-pin popup CSS ────────────────────────────────── */
 const POPUP_CSS = `
 .fb-popup .maplibregl-popup-content {
   background: rgba(9,13,22,0.97) !important;
@@ -127,7 +40,78 @@ const POPUP_CSS = `
 .fb-popup .maplibregl-popup-tip { display:none !important; }
 `;
 
-/* ─── Helpers ────────────────────────────────────────────────── */
+function drawPinImage(color, size = 2) {
+  const W    = 40 * size;
+  const H    = 58 * size;
+  const cx   = W / 2;
+  const r    = 14 * size;
+  const cy   = r + 3 * size;
+  const tipY = H - 1 * size;
+
+  const canvas = document.createElement("canvas");
+  canvas.width  = W;
+  canvas.height = H;
+  const ctx = canvas.getContext("2d");
+
+  ctx.shadowColor   = "rgba(0,0,0,0.65)";
+  ctx.shadowBlur    = 7 * size;
+  ctx.shadowOffsetX = 1 * size;
+  ctx.shadowOffsetY = 4 * size;
+
+  const sw = 5.5 * size;
+  ctx.beginPath();
+  ctx.moveTo(cx - sw, cy + r * 0.65);
+  ctx.lineTo(cx,      tipY);
+  ctx.lineTo(cx + sw, cy + r * 0.65);
+  ctx.arc(cx, cy, r, Math.PI * 0.74, Math.PI * 0.26, true);
+  ctx.closePath();
+  const spikeGrad = ctx.createLinearGradient(cx, cy, cx, tipY);
+  spikeGrad.addColorStop(0,   color.fill);
+  spikeGrad.addColorStop(1,   color.stroke);
+  ctx.fillStyle = spikeGrad;
+  ctx.fill();
+
+  ctx.shadowColor = "transparent";
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  const sg = ctx.createRadialGradient(
+    cx - r * 0.32, cy - r * 0.32, r * 0.04,
+    cx,            cy,             r
+  );
+  sg.addColorStop(0,    lighten(color.fill, 0.50));
+  sg.addColorStop(0.40, color.fill);
+  sg.addColorStop(1,    color.stroke);
+  ctx.fillStyle = sg;
+  ctx.fill();
+  ctx.strokeStyle = color.stroke;
+  ctx.lineWidth   = 1.5 * size;
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.ellipse(
+    cx - r * 0.30, cy - r * 0.30,
+    r * 0.22, r * 0.14,
+    -Math.PI / 4, 0, Math.PI * 2
+  );
+  ctx.fillStyle = "rgba(255,255,255,0.50)";
+  ctx.fill();
+
+  ctx.beginPath();
+  ctx.arc(cx, cy, r * 0.26, 0, Math.PI * 2);
+  ctx.fillStyle = "rgba(255,255,255,0.80)";
+  ctx.fill();
+
+  return { data: ctx.getImageData(0, 0, W, H), width: W, height: H };
+}
+
+function lighten(hex, amt) {
+  const n = parseInt(hex.replace("#",""), 16);
+  const r = Math.min(255, (n>>16) + Math.round(255*amt));
+  const g = Math.min(255, ((n>>8)&0xff) + Math.round(255*amt));
+  const b = Math.min(255, (n&0xff) + Math.round(255*amt));
+  return `rgb(${r},${g},${b})`;
+}
+
 function validCoords(s) {
   const lat = parseFloat(s.lat), lng = parseFloat(s.lng);
   return !isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0
@@ -151,7 +135,6 @@ function toGeoJSON(stations, fuelType) {
         category: s.price_category || "medium",
         price:    s.display_price ?? s.prices?.[fuelType] ?? 0,
         prices:   JSON.stringify(s.prices || {}),
-        // icon name matches what we register with addImage
         icon: `pin-${s.price_category || "medium"}${s.is_open===false?"-closed":""}`,
       },
     })),
@@ -191,9 +174,6 @@ function buildPopupHTML(station, fuelType) {
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">${rows}</div>`;
 }
 
-/* ═══════════════════════════════════════════════════════════
-   Component
-═══════════════════════════════════════════════════════════ */
 export default function FuelMap({ onStationSelect }) {
   const containerRef = useRef(null);
   const mapRef       = useRef(null);
@@ -212,7 +192,145 @@ export default function FuelMap({ onStationSelect }) {
   const [totalCount,      setTotalCount]      = useState(0);
   const [pinsVisible,     setPinsVisible]     = useState(true);
 
-  /* ── Inject popup CSS once ──────────────────────────────────── */
+  // ── Helper: register all 6 pin images onto the map ─────────────────────
+  // Called both on initial load AND after every style reload so pins
+  // are never wiped by a style change / fallback swap.
+  function registerPinImages(map, isMobile) {
+    const PIN_SIZE = isMobile ? 1.5 : 2;
+    const closedColor = {
+      fill: "#3a3f52", stroke: "#1e2230",
+      text: "#8b90a8", glow: "rgba(58,63,82,0.4)",
+    };
+    Object.entries(PRICE_COLORS).forEach(([cat, color]) => {
+      const open = drawPinImage(color, PIN_SIZE);
+      if (!map.hasImage(`pin-${cat}`)) {
+        map.addImage(`pin-${cat}`, {
+          width: open.width, height: open.height, data: open.data.data,
+        });
+      }
+      const closed = drawPinImage(closedColor, PIN_SIZE * 0.75);
+      if (!map.hasImage(`pin-${cat}-closed`)) {
+        map.addImage(`pin-${cat}-closed`, {
+          width: closed.width, height: closed.height, data: closed.data.data,
+        });
+      }
+    });
+  }
+
+  // ── Helper: add all layers (source + cluster + pins + selected ring) ───
+  function addLayers(map) {
+    // Guard: don't double-add
+    if (map.getSource(SRC_ID)) return;
+
+    map.addSource(SRC_ID, {
+      type:           "geojson",
+      data:           { type:"FeatureCollection", features:[] },
+      cluster:        true,
+      clusterMaxZoom: 13,
+      clusterRadius:  38,
+    });
+
+    map.addLayer({
+      id:     "fb-clusters",
+      type:   "circle",
+      source: SRC_ID,
+      filter: ["has","point_count"],
+      paint: {
+        "circle-color":        "rgba(18,22,34,0.92)",
+        "circle-radius":       ["step",["get","point_count"],14,10,18,50,22],
+        "circle-stroke-width": 1.5,
+        "circle-stroke-color": "rgba(255,255,255,0.25)",
+      },
+    });
+
+    map.addLayer({
+      id:     "fb-cluster-count",
+      type:   "symbol",
+      source: SRC_ID,
+      filter: ["has","point_count"],
+      layout: {
+        "text-field":         ["concat",["get","point_count_abbreviated"]," ⛽"],
+        "text-font":          ["Open Sans Bold","Arial Unicode MS Bold"],
+        "text-size":          11,
+        "text-allow-overlap": true,
+      },
+      paint: {
+        "text-color":      "#FFD166",
+        "text-halo-color": "rgba(8,11,16,0.8)",
+        "text-halo-width": 1,
+      },
+    });
+
+    map.addLayer({
+      id:     LAYER_PINS,
+      type:   "symbol",
+      source: SRC_ID,
+      filter: ["!", ["has","point_count"]],
+      layout: {
+        "icon-image":           ["get","icon"],
+        "icon-size": [
+          "interpolate",["linear"],["zoom"],
+          13, 0.38,
+          14, 0.50,
+          15, 0.65,
+          17, 0.80,
+        ],
+        // KEY FIX: allow-overlap TRUE so pins are never hidden
+        "icon-allow-overlap":    true,
+        "icon-ignore-placement": true,
+        "icon-anchor":           "bottom",
+        "text-field": [
+          "concat","₱",
+          ["to-string",["round",["get","price"]]]
+        ],
+        "text-font":          ["Open Sans Bold","Arial Unicode MS Bold"],
+        "text-size": [
+          "interpolate",["linear"],["zoom"],
+          11, 0,
+          12, 10,
+          14, 12,
+          16, 13,
+        ],
+        "text-anchor":        "bottom",
+        "text-offset":        [0, -2.8],
+        "text-allow-overlap": true,
+        "text-optional":      true,
+      },
+      paint: {
+        "text-color": [
+          "match",["get","category"],
+          "cheap",    "#00E5A0",
+          "expensive", "#FF4757",
+          "#FFD166"
+        ],
+        "text-halo-color": "rgba(8,11,16,0.90)",
+        "text-halo-width": 2,
+        "icon-opacity":  ["case",["==",["get","is_open"],false], 0.45, 1.0],
+        "text-opacity":  ["case",["==",["get","is_open"],false], 0.45, 1.0],
+      },
+    });
+
+    map.addLayer({
+      id:     LAYER_SELECTED,
+      type:   "circle",
+      source: SRC_ID,
+      filter: ["==","id","__none__"],
+      paint: {
+        "circle-radius": [
+          "interpolate",["linear"],["zoom"],
+          10,22, 14,28, 16,36
+        ],
+        "circle-color":          "transparent",
+        "circle-stroke-width":   3,
+        "circle-stroke-color": [
+          "match",["get","category"],
+          "cheap","#00E5A0","expensive","#FF4757","#FFD166"
+        ],
+        "circle-stroke-opacity": 0.9,
+      },
+    });
+  }
+
   useEffect(() => {
     if (cssInjected.current || typeof document === "undefined") return;
     const tag = document.createElement("style");
@@ -223,7 +341,6 @@ export default function FuelMap({ onStationSelect }) {
     return () => { tag.remove(); cssInjected.current = false; };
   }, []);
 
-  /* ── Fetch stations ─────────────────────────────────────────── */
   useEffect(() => { loadStations(); }, [fuelType]);
 
   async function loadStations() {
@@ -244,7 +361,7 @@ export default function FuelMap({ onStationSelect }) {
     }
   }
 
-  /* ── Init MapLibre ──────────────────────────────────────────── */
+  // ── Init MapLibre ────────────────────────────────────────────────────────
   useEffect(() => {
     if (typeof window === "undefined" || mapRef.current) return;
     let cancelled = false;
@@ -281,6 +398,7 @@ export default function FuelMap({ onStationSelect }) {
 
       mapRef.current = map;
 
+      // Style error → try fallback style
       map.on("error", (e) => {
         const msg = String(e?.error?.message ?? "");
         if (!mapRef.current?._loaded && (msg.includes("style")||msg.includes("404")||msg.includes("Failed"))) {
@@ -288,161 +406,47 @@ export default function FuelMap({ onStationSelect }) {
         }
       });
 
+      // ── Re-register images + re-add layers after ANY style reload ───────
+      // This fires on initial load AND whenever setStyle() is called (e.g.
+      // the fallback swap above), ensuring pins are never permanently lost.
+      map.on("style.load", () => {
+        if (cancelled) return;
+        registerPinImages(map, isMobile);
+        addLayers(map);
+
+        // Re-attach cluster click
+        map.on("click", "fb-clusters", (e) => {
+          const feat = map.queryRenderedFeatures(e.point, { layers:["fb-clusters"] })[0];
+          const cid  = feat?.properties?.cluster_id;
+          if (!cid) return;
+          map.getSource(SRC_ID).getClusterExpansionZoom(cid, (err, zoom) => {
+            if (err) return;
+            map.easeTo({ center: feat.geometry.coordinates, zoom: zoom + 0.5, duration: 400 });
+          });
+        });
+
+        map.on("mouseenter","fb-clusters",()=>{ map.getCanvas().style.cursor="pointer"; });
+        map.on("mouseleave","fb-clusters",()=>{ map.getCanvas().style.cursor=""; });
+
+        map.on("click", LAYER_PINS, (e) => {
+          const props = e.features?.[0]?.properties;
+          if (!props) return;
+          const station = stationsMap.current[props.id];
+          if (station) handleStationClick(station, ml, map);
+        });
+
+        [LAYER_PINS].forEach((l) => {
+          map.on("mouseenter", l, () => { map.getCanvas().style.cursor = "pointer"; });
+          map.on("mouseleave", l, () => { map.getCanvas().style.cursor = ""; });
+        });
+
+        setMapReady(true);
+      });
+
+      // Keep the original "load" for one-time controls setup
       map.on("load", () => {
         if (cancelled) return;
 
-        // ── Register pin images (canvas-drawn, WebGL sprites) ──
-        // One per category × open/closed state = 6 images total
-        const PIN_SIZE = isMobile ? 1.5 : 2;
-        Object.entries(PRICE_COLORS).forEach(([cat, color]) => {
-          // Open pin
-          const open = drawPinImage(color, PIN_SIZE);
-          if (!map.hasImage(`pin-${cat}`)) {
-            map.addImage(`pin-${cat}`, {
-              width:  open.width,
-              height: open.height,
-              data:   open.data.data,
-            });
-          }
-          // Closed pin (desaturated)
-          const closedColor = {
-            fill:   "#3a3f52",
-            stroke: "#1e2230",
-            text:   "#8b90a8",
-            glow:   "rgba(58,63,82,0.4)",
-          };
-          const closed = drawPinImage(closedColor, PIN_SIZE * 0.75);
-          if (!map.hasImage(`pin-${cat}-closed`)) {
-            map.addImage(`pin-${cat}-closed`, {
-              width:  closed.width,
-              height: closed.height,
-              data:   closed.data.data,
-            });
-          }
-        });
-
-        // ── GeoJSON source ──
-        map.addSource(SRC_ID, {
-          type:             "geojson",
-          data:             { type:"FeatureCollection", features:[] },
-          cluster:          true,
-          clusterMaxZoom:   13,   // individual pins appear at zoom 13+
-          clusterRadius:    38,   // px — tight enough to not over-merge
-        });
-
-        // ── Cluster bubble ──
-        map.addLayer({
-          id:     "fb-clusters",
-          type:   "circle",
-          source: SRC_ID,
-          filter: ["has","point_count"],
-          paint: {
-            // All clusters are the same dark glass colour — not colourful blobs
-            "circle-color":        "rgba(18,22,34,0.92)",
-            "circle-radius":       ["step",["get","point_count"],14,10,18,50,22],
-            "circle-stroke-width": 1.5,
-            "circle-stroke-color": "rgba(255,255,255,0.25)",
-          },
-        });
-
-        // ── Cluster count label ──
-        map.addLayer({
-          id:     "fb-cluster-count",
-          type:   "symbol",
-          source: SRC_ID,
-          filter: ["has","point_count"],
-          layout: {
-            "text-field":         ["concat",["get","point_count_abbreviated"]," ⛽"],
-            "text-font":          ["Open Sans Bold","Arial Unicode MS Bold"],
-            "text-size":          11,
-            "text-allow-overlap": true,
-          },
-          paint: {
-            "text-color":      "#FFD166",
-            "text-halo-color": "rgba(8,11,16,0.8)",
-            "text-halo-width": 1,
-          },
-        });
-
-        // ── Pin symbols (individual stations) ──
-        map.addLayer({
-          id:      LAYER_PINS,
-          type:    "symbol",
-          source:  SRC_ID,
-          filter:  ["!", ["has","point_count"]],  // skip clustered points
-
-          layout: {
-            // Use the icon name stored in the feature properties
-            "icon-image":           ["get","icon"],
-            "icon-size":            [
-              "interpolate",["linear"],["zoom"],
-              13, 0.38,   // small when just de-clustered
-              14, 0.50,
-              15, 0.65,
-              17, 0.80,
-            ],
-            // Prevent overlapping symbols — let MapLibre hide when crowded
-            "icon-allow-overlap":    false,
-            "icon-ignore-placement": false,
-            "icon-padding":          2,
-            // Anchor at bottom so the tip sits exactly on the coordinate
-            "icon-anchor":          "bottom",
-            // Price label above pin
-            "text-field":           [
-              "concat","₱",
-              ["to-string",["round",["get","price"]]]
-            ],
-            "text-font":            ["Open Sans Bold","Arial Unicode MS Bold"],
-            "text-size":            [
-              "interpolate",["linear"],["zoom"],
-              11, 0,     // hidden at low zoom
-              12, 10,
-              14, 12,
-              16, 13,
-            ],
-            "text-anchor":          "bottom",
-            "text-offset":          [0, -2.8],
-            "text-allow-overlap":   false,
-            "text-optional":        true,
-          },
-          paint: {
-            // Price label colour matches pin category
-            "text-color": [
-              "match",["get","category"],
-              "cheap",     "#00E5A0",
-              "expensive",  "#FF4757",
-              "#FFD166"
-            ],
-            "text-halo-color": "rgba(8,11,16,0.90)",
-            "text-halo-width": 2,
-            // Fade closed stations
-            "icon-opacity":  ["case",["==",["get","is_open"],false], 0.45, 1.0],
-            "text-opacity":  ["case",["==",["get","is_open"],false], 0.45, 1.0],
-          },
-        });
-
-        // ── Selected-station pulse ring ──
-        map.addLayer({
-          id:     LAYER_SELECTED,
-          type:   "circle",
-          source: SRC_ID,
-          filter: ["==","id","__none__"],
-          paint: {
-            "circle-radius": [
-              "interpolate",["linear"],["zoom"],
-              10,22, 14,28, 16,36
-            ],
-            "circle-color":          "transparent",
-            "circle-stroke-width":   3,
-            "circle-stroke-color": [
-              "match",["get","category"],
-              "cheap","#00E5A0","expensive","#FF4757","#FFD166"
-            ],
-            "circle-stroke-opacity": 0.9,
-          },
-        });
-
-        // ── 3D buildings (desktop only) ──
         if (!isMobile) {
           const labelLayerId = map.getStyle()?.layers
             ?.find((l)=>l.type==="symbol"&&l.layout?.["text-field"])?.id;
@@ -464,35 +468,6 @@ export default function FuelMap({ onStationSelect }) {
           }
         }
 
-        // ── Click cluster → zoom in ──
-        map.on("click", "fb-clusters", (e) => {
-          const feat = map.queryRenderedFeatures(e.point, { layers:["fb-clusters"] })[0];
-          const cid  = feat?.properties?.cluster_id;
-          if (!cid) return;
-          map.getSource(SRC_ID).getClusterExpansionZoom(cid, (err, zoom) => {
-            if (err) return;
-            map.easeTo({ center: feat.geometry.coordinates, zoom: zoom + 0.5, duration: 400 });
-          });
-        });
-
-        // ── Cursor on cluster ──
-        map.on("mouseenter","fb-clusters",()=>{ map.getCanvas().style.cursor="pointer"; });
-        map.on("mouseleave","fb-clusters",()=>{ map.getCanvas().style.cursor=""; });
-
-        // ── Click: individual pin ──
-        map.on("click", LAYER_PINS, (e) => {
-          const props = e.features?.[0]?.properties;
-          if (!props) return;
-          const station = stationsMap.current[props.id];
-          if (station) handleStationClick(station, ml, map);
-        });
-
-        // ── Cursors ──
-        [LAYER_PINS].forEach((l) => {
-          map.on("mouseenter", l, () => { map.getCanvas().style.cursor = "pointer"; });
-          map.on("mouseleave", l, () => { map.getCanvas().style.cursor = ""; });
-        });
-
         map.addControl(
           new ml.NavigationControl({ showCompass:!isMobile, visualizePitch:true }),
           "top-right"
@@ -500,8 +475,6 @@ export default function FuelMap({ onStationSelect }) {
         if (!isMobile) {
           map.addControl(new ml.ScaleControl({ maxWidth:80, unit:"metric" }), "bottom-right");
         }
-
-        setMapReady(true);
       });
     }
 
@@ -513,7 +486,7 @@ export default function FuelMap({ onStationSelect }) {
     };
   }, []);
 
-  /* ── Update GeoJSON source ──────────────────────────────────── */
+  // ── Update GeoJSON source ────────────────────────────────────────────────
   const updateSource = useCallback(() => {
     const map = mapRef.current;
     if (!map || !mapReady || stations.length === 0) return;
@@ -532,7 +505,7 @@ export default function FuelMap({ onStationSelect }) {
 
   useEffect(() => { updateSource(); }, [updateSource]);
 
-  /* ── Station click ──────────────────────────────────────────── */
+  // ── Station click ────────────────────────────────────────────────────────
   function handleStationClick(station, ml, map) {
     setSelectedStation(station);
     if (onStationSelect) onStationSelect(station);
@@ -541,9 +514,7 @@ export default function FuelMap({ onStationSelect }) {
     const lng = parseFloat(station.lng);
     const lat = parseFloat(station.lat);
 
-    // Show selection ring on GL layer
     map.setFilter(LAYER_SELECTED, ["==","id", station.id]);
-
     map.flyTo({
       center:[lng, lat], zoom:15.5,
       pitch:55, bearing:(Math.random()*20)-10,
@@ -560,23 +531,18 @@ export default function FuelMap({ onStationSelect }) {
       .addTo(map);
   }
 
-
-  /* ── Toggle pin visibility ──────────────────────────────────── */
   function togglePins() {
     const map = mapRef.current;
     if (!map || !mapReady) return;
     const next = !pinsVisible;
     setPinsVisible(next);
     const vis = next ? "visible" : "none";
-    [LAYER_PINS, LAYER_SELECTED, "fb-labels",
-     "fb-clusters", "fb-cluster-count"].forEach((id) => {
+    [LAYER_PINS, LAYER_SELECTED, "fb-clusters", "fb-cluster-count"].forEach((id) => {
       try { map.setLayoutProperty(id, "visibility", vis); } catch {}
     });
-    // Also close detail panel when hiding
     if (!next) closeDetail();
   }
 
-  /* ── Close panel ────────────────────────────────────────────── */
   function closeDetail() {
     setSelectedStation(null);
     if (popupRef.current) { popupRef.current.remove(); popupRef.current = null; }
@@ -589,7 +555,6 @@ export default function FuelMap({ onStationSelect }) {
     }
   }
 
-  /* ── Derived ────────────────────────────────────────────────── */
   const cheapest = stations
     .filter((s) => s.is_open && validCoords(s))
     .sort((a,b) => (a.display_price||99)-(b.display_price||99))[0];
@@ -598,11 +563,8 @@ export default function FuelMap({ onStationSelect }) {
     ? totalCount
     : stations.filter((s) => s.price_category===filter && validCoords(s)).length;
 
-  /* ── JSX ────────────────────────────────────────────────────── */
   return (
     <div className={styles.container}>
-
-      {/* Controls */}
       <div className={styles.controls}>
         <div className={styles.controlsLeft}>
           <div className={styles.fuelSelector}>
@@ -667,7 +629,6 @@ export default function FuelMap({ onStationSelect }) {
         </div>
       </div>
 
-      {/* Map */}
       <div className={styles.mapWrapper}>
         <div ref={containerRef} className={styles.map} />
 
@@ -700,7 +661,6 @@ export default function FuelMap({ onStationSelect }) {
         )}
       </div>
 
-      {/* Detail panel */}
       {selectedStation && (
         <div className={`${styles.detailPanel} animate-fadeIn`}>
           <button className={styles.closeBtn} onClick={closeDetail}>✕</button>
@@ -739,7 +699,6 @@ export default function FuelMap({ onStationSelect }) {
   );
 }
 
-/* ─── Mock data ─────────────────────────────────────────────── */
 function getMockStations() {
   return [
     {id:1,  name:"Petron - EDSA Magallanes",brand:"Petron", lat:14.5547,lng:121.0244,city:"Makati",    prices:{gas91:56.20,gas95:60.15,diesel:52.10},display_price:60.15,price_category:"expensive",is_open:true, address:"EDSA cor. Magallanes Ave"},
