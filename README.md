@@ -32,11 +32,10 @@ FuelBridge is a hackathon prototype that helps Filipino drivers:
 | Layer | Technology |
 |-------|-----------|
 | Frontend | Next.js 14 (React) + CSS Modules |
-| Maps | Leaflet.js + OpenStreetMap (free, no API key) |
+| Maps | Leaflet.js + OpenStreetMap + MapLibre GL |
 | Backend | Node.js + Express |
 | Database | Supabase (PostgreSQL) |
-| Hosting | Vercel (frontend) + Railway/Render (backend) |
-| AI | Rule-based keyword matching (no ML needed) |
+| AI | Rule-based keyword matching |
 
 ---
 
