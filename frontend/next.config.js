@@ -9,12 +9,7 @@ const nextConfig = {
   },
  
   webpack: (config) => {
-    // Required for Leaflet (RouteOptimizer) and MapLibre GL (FuelMap)
     config.resolve.fallback = { fs: false };
- 
-    // maplibre-gl ships its own ESM bundles — let webpack handle them natively.
-    // Do NOT add babel-loader here; it re-transpiles the whole library on every
-    // dev build and is the primary cause of slow HMR with this package.
  
     return config;
   },
