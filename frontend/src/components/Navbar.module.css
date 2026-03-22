@@ -2,305 +2,236 @@
    Navbar — Left Glassmorphic Sidebar
    ============================================================ */
 
-/* ── Sidebar Shell ─────────────────────────────────────────── */
-.sidebar {
-  position: fixed;
-  top: 0;
-  left: 0;
-  bottom: 0;
-  z-index: 100;
-  width: 220px;
-  display: flex;
-  flex-direction: column;
-  padding: 20px 14px 20px;
-  gap: 6px;
-
-  background: rgba(8, 11, 16, 0.82);
-  backdrop-filter: blur(28px) saturate(1.4);
-  -webkit-backdrop-filter: blur(28px) saturate(1.4);
-
-  border-right: 1px solid rgba(255, 255, 255, 0.07);
-  box-shadow:
-    1px 0 0 rgba(255,255,255,0.04) inset,
-    8px 0 32px rgba(0,0,0,0.40);
-
-  transition: width 0.25s cubic-bezier(0.25,0.46,0.45,0.94);
-  overflow: hidden;
-  overflow-x: hidden; /* prevent horizontal scroll during collapse animation */
-}
-
-.sidebarCollapsed {
-  width: 64px;
-}
-
-/* ── Brand ─────────────────────────────────────────────────── */
-.brand {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 4px 4px 18px;
-  border-bottom: 1px solid rgba(255,255,255,0.06);
-  margin-bottom: 8px;
-  flex-shrink: 0;
-  overflow: hidden;
-}
-
-.logo {
-  width: 38px;
-  height: 38px;
-  min-width: 38px;
-  border-radius: 12px;
-  background: linear-gradient(135deg, var(--amber) 0%, var(--amber-muted) 100%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.2rem;
-  box-shadow: var(--shadow-amber), inset 0 1px 0 rgba(255,255,255,0.2);
-  flex-shrink: 0;
-  transition: var(--ease-bounce);
-}
-
-.logo:hover {
-  transform: scale(1.06) rotate(-3deg);
-  box-shadow: 0 6px 36px rgba(255,107,26,0.45);
-}
-
-.brandText {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  overflow: hidden;
-  white-space: nowrap;
-}
-
-.brandName {
-  font-family: var(--font-display);
-  font-size: 1.1rem;
-  font-weight: 800;
-  color: var(--text-primary);
-  line-height: 1.1;
-  letter-spacing: -0.03em;
-}
-
-.brandName span { color: var(--amber); }
-
-.tagline {
-  font-size: 0.58rem;
-  font-weight: 500;
-  color: var(--text-muted);
-  letter-spacing: 0.09em;
-  text-transform: uppercase;
-}
-
-/* ── Collapse Button ─────────────────────────────────────────
-   Fixed: removed position: absolute + right: -12px which caused
-   clipping. Now sits in normal flow aligned to the right edge.
-   ─────────────────────────────────────────────────────────── */
-.collapseBtn {
-  align-self: flex-end;
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  background: var(--space-4);
-  border: 1px solid rgba(255,255,255,0.12);
-  color: var(--text-secondary);
-  font-size: 0.9rem;
-  font-weight: 700;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  margin-bottom: 4px;
-  transition: var(--ease-smooth);
-  box-shadow: var(--shadow-sm);
-  line-height: 1;
-}
-
-/* When collapsed, center the button */
-.sidebarCollapsed .collapseBtn {
-  align-self: center;
-}
-
-.collapseBtn:hover {
-  background: var(--amber);
-  color: #fff;
-  border-color: var(--amber);
-  box-shadow: var(--shadow-amber);
-}
-
-/* ── Nav Items ─────────────────────────────────────────────── */
-.nav {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  flex: 1;
-}
-
-.tab {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: 11px;
-  padding: 11px 12px;
-  border-radius: var(--r-md);
-  border: 1px solid transparent;
-  background: transparent;
-  font-family: var(--font-body);
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: var(--text-secondary);
-  cursor: pointer;
-  transition: var(--ease-glass);
-  white-space: nowrap;
-  overflow: hidden;
-  text-align: left;
-  width: 100%;
-}
-
-/* Collapsed state: center icon */
-.sidebarCollapsed .tab {
-  justify-content: center;
-  padding: 11px 0;
-}
-
-.tab:hover {
-  background: rgba(255,255,255,0.05);
-  color: var(--text-primary);
-  border-color: rgba(255,255,255,0.07);
-}
-
-.tabActive {
-  background: rgba(255,107,26,0.10) !important;
-  color: var(--amber) !important;
-  border-color: rgba(255,107,26,0.28) !important;
-  box-shadow:
-    0 2px 14px rgba(255,107,26,0.14),
-    inset 0 1px 0 rgba(255,255,255,0.06);
-}
-
-.tabIcon {
-  font-size: 1.15rem;
-  flex-shrink: 0;
-  line-height: 1;
-  width: 22px;
-  text-align: center;
-}
-
-.tabLabel {
-  flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* Active left accent bar */
-.tabIndicator {
-  position: absolute;
-  left: 0;
-  top: 20%;
-  bottom: 20%;
-  width: 3px;
-  border-radius: 0 3px 3px 0;
-  background: var(--amber);
-  box-shadow: 0 0 8px rgba(255,107,26,0.6);
-}
-
-/* ── Bottom section ────────────────────────────────────────── */
-.bottom {
-  flex-shrink: 0;
-  padding-top: 12px;
-  border-top: 1px solid rgba(255,255,255,0.06);
-  margin-top: auto;
-}
-
-.badge {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  padding: 8px 12px;
-  border-radius: var(--r-md);
-  font-family: var(--font-body);
-  font-size: 0.72rem;
-  font-weight: 600;
-  color: var(--emerald);
-  letter-spacing: 0.03em;
-  background: rgba(0,229,160,0.07);
-  border: 1px solid rgba(0,229,160,0.18);
-  white-space: nowrap;
-  overflow: hidden;
-}
-
-.dotOnly {
-  display: flex;
-  justify-content: center;
-  padding: 8px 0;
-}
-
-.dot {
-  width: 7px;
-  height: 7px;
-  min-width: 7px;
-  background: var(--emerald);
-  border-radius: 50%;
-  animation: pulse-amber 2s ease-in-out infinite;
-  box-shadow: 0 0 6px rgba(0,229,160,0.6);
-}
-
-/* ── Mobile Bottom Nav ─────────────────────────────────────── */
-.mobileNav {
-  display: none;
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  z-index: 200;
-
-  background: rgba(8,11,16,0.92);
-  backdrop-filter: blur(28px) saturate(1.4);
-  -webkit-backdrop-filter: blur(28px) saturate(1.4);
-
-  border-top: 1px solid rgba(255,255,255,0.08);
-  padding: 8px 0 env(safe-area-inset-bottom, 8px);
-  justify-content: space-around;
-  box-shadow: 0 -8px 40px rgba(0,0,0,0.5);
-}
-
-.mobileTab {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 3px;
-  padding: 6px 16px;
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  color: var(--text-muted);
-  transition: var(--ease-smooth);
-  flex: 1;
-}
-
-.mobileTabActive { color: var(--amber) !important; }
-.mobileTabActive .mobileIcon { filter: drop-shadow(0 0 6px rgba(255,107,26,0.6)); }
-
-.mobileIcon {
-  font-size: 1.3rem;
-  line-height: 1;
-  transition: var(--ease-bounce);
-}
-
-.mobileTab:hover .mobileIcon  { transform: translateY(-2px); }
-.mobileTabActive .mobileIcon  { transform: translateY(-2px); }
-
-.mobileLabel {
-  font-family: var(--font-body);
-  font-size: 0.60rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-
-/* ── Responsive ────────────────────────────────────────────── */
-@media (max-width: 768px) {
-  .sidebar    { display: none; }
-  .mobileNav  { display: flex; }
-}
+   .sidebar {
+    position: fixed;
+    top: 0; left: 0; bottom: 0;
+    z-index: 100;
+    width: 220px;
+    display: flex;
+    flex-direction: column;
+    padding: 20px 14px 20px;
+    gap: 6px;
+    background: rgba(8, 11, 16, 0.82);
+    backdrop-filter: blur(28px) saturate(1.4);
+    -webkit-backdrop-filter: blur(28px) saturate(1.4);
+    border-right: 1px solid rgba(255, 255, 255, 0.07);
+    box-shadow: 1px 0 0 rgba(255,255,255,0.04) inset, 8px 0 32px rgba(0,0,0,0.40);
+    transition: width 0.25s cubic-bezier(0.25,0.46,0.45,0.94);
+    overflow: hidden;
+  }
+  
+  .sidebarCollapsed { width: 64px; }
+  
+  /* ── Brand ─────────────────────────────────────────────────── */
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 4px 4px 18px;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    margin-bottom: 8px;
+    flex-shrink: 0;
+    overflow: hidden;
+  }
+  
+  .logo {
+    width: 38px; height: 38px; min-width: 38px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, var(--amber) 0%, var(--amber-muted) 100%);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.2rem;
+    box-shadow: var(--shadow-amber), inset 0 1px 0 rgba(255,255,255,0.2);
+    flex-shrink: 0;
+    transition: var(--ease-bounce);
+  }
+  .logo:hover { transform: scale(1.06) rotate(-3deg); }
+  
+  .brandText { display: flex; flex-direction: column; gap: 1px; overflow: hidden; white-space: nowrap; }
+  
+  .brandName {
+    font-family: var(--font-display);
+    font-size: 1.1rem; font-weight: 800;
+    color: var(--text-primary);
+    line-height: 1.1; letter-spacing: -0.03em;
+  }
+  .brandName span { color: var(--amber); }
+  
+  .tagline { font-size: 0.58rem; font-weight: 500; color: var(--text-muted); letter-spacing: 0.09em; text-transform: uppercase; }
+  
+  /* ── Collapse button ───────────────────────────────────────── */
+  .collapseBtn {
+    align-self: flex-end;
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    background: var(--space-4);
+    border: 1px solid rgba(255,255,255,0.12);
+    color: var(--text-secondary);
+    font-size: 0.9rem; font-weight: 700;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    margin-bottom: 4px;
+    transition: var(--ease-smooth);
+    line-height: 1;
+  }
+  .sidebarCollapsed .collapseBtn { align-self: center; }
+  .collapseBtn:hover { background: var(--amber); color: #fff; border-color: var(--amber); box-shadow: var(--shadow-amber); }
+  
+  /* ── Nav ───────────────────────────────────────────────────── */
+  .nav { display: flex; flex-direction: column; gap: 3px; flex: 1; }
+  
+  .tab {
+    position: relative;
+    display: flex; align-items: center; gap: 11px;
+    padding: 11px 12px;
+    border-radius: var(--r-md);
+    border: 1px solid transparent;
+    background: transparent;
+    font-family: var(--font-body);
+    font-size: 0.875rem; font-weight: 600;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: var(--ease-glass);
+    white-space: nowrap; overflow: hidden;
+    text-align: left; width: 100%;
+  }
+  .sidebarCollapsed .tab { justify-content: center; padding: 11px 0; }
+  .tab:hover { background: rgba(255,255,255,0.05); color: var(--text-primary); border-color: rgba(255,255,255,0.07); }
+  .tabActive {
+    background: rgba(255,107,26,0.10) !important;
+    color: var(--amber) !important;
+    border-color: rgba(255,107,26,0.28) !important;
+    box-shadow: 0 2px 14px rgba(255,107,26,0.14), inset 0 1px 0 rgba(255,255,255,0.06);
+  }
+  .tabIcon  { font-size: 1.15rem; flex-shrink: 0; line-height: 1; width: 22px; text-align: center; }
+  .tabLabel { flex: 1; overflow: hidden; text-overflow: ellipsis; }
+  .tabIndicator { position: absolute; left: 0; top: 20%; bottom: 20%; width: 3px; border-radius: 0 3px 3px 0; background: var(--amber); box-shadow: 0 0 8px rgba(255,107,26,0.6); }
+  
+  /* ── Bottom ────────────────────────────────────────────────── */
+  .bottom {
+    flex-shrink: 0;
+    padding-top: 12px;
+    border-top: 1px solid rgba(255,255,255,0.06);
+    margin-top: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .badge {
+    display: flex; align-items: center; gap: 7px;
+    padding: 8px 12px;
+    border-radius: var(--r-md);
+    font-family: var(--font-body);
+    font-size: 0.72rem; font-weight: 600;
+    color: var(--emerald);
+    background: rgba(0,229,160,0.07);
+    border: 1px solid rgba(0,229,160,0.18);
+    white-space: nowrap; overflow: hidden;
+  }
+  .dotOnly { display: flex; justify-content: center; padding: 8px 0; }
+  .dot {
+    width: 7px; height: 7px; min-width: 7px;
+    background: var(--emerald); border-radius: 50%;
+    animation: pulse-amber 2s ease-in-out infinite;
+    box-shadow: 0 0 6px rgba(0,229,160,0.6);
+  }
+  
+  /* ── Cooperative section ───────────────────────────────────── */
+  .coopSection {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  
+  .coopInfo {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 9px 11px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: var(--r-md);
+    overflow: hidden;
+  }
+  
+  .coopLabel {
+    font-size: 0.58rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.09em;
+    color: var(--text-muted);
+  }
+  
+  .coopName {
+    font-size: 0.76rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.3;
+  }
+  
+  .coopId {
+    font-size: 0.64rem;
+    font-family: var(--font-mono);
+    color: var(--amber-bright);
+  }
+  
+  .logoutBtn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: rgba(255,71,87,0.06);
+    border: 1px solid rgba(255,71,87,0.16);
+    border-radius: var(--r-md);
+    font-family: var(--font-body);
+    font-size: 0.76rem;
+    font-weight: 600;
+    color: rgba(255,71,87,0.70);
+    cursor: pointer;
+    transition: var(--ease-smooth);
+    white-space: nowrap;
+    overflow: hidden;
+  }
+  .sidebarCollapsed .logoutBtn { justify-content: center; padding: 8px 0; }
+  .logoutBtn:hover { background: rgba(255,71,87,0.12); border-color: rgba(255,71,87,0.30); color: var(--crimson); }
+  
+  .logoutIcon { font-size: 0.90rem; flex-shrink: 0; }
+  
+  /* ── Mobile Bottom Nav ─────────────────────────────────────── */
+  .mobileNav {
+    display: none;
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    z-index: 200;
+    background: rgba(8,11,16,0.92);
+    backdrop-filter: blur(28px) saturate(1.4);
+    -webkit-backdrop-filter: blur(28px) saturate(1.4);
+    border-top: 1px solid rgba(255,255,255,0.08);
+    padding: 8px 0 env(safe-area-inset-bottom, 8px);
+    justify-content: space-around;
+    box-shadow: 0 -8px 40px rgba(0,0,0,0.5);
+  }
+  
+  .mobileTab {
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+    padding: 6px 16px;
+    background: transparent; border: none;
+    cursor: pointer; color: var(--text-muted);
+    transition: var(--ease-smooth); flex: 1;
+  }
+  .mobileTabActive { color: var(--amber) !important; }
+  .mobileTabActive .mobileIcon { filter: drop-shadow(0 0 6px rgba(255,107,26,0.6)); }
+  .mobileIcon { font-size: 1.3rem; line-height: 1; transition: var(--ease-bounce); }
+  .mobileTab:hover .mobileIcon { transform: translateY(-2px); }
+  .mobileTabActive .mobileIcon { transform: translateY(-2px); }
+  .mobileLabel { font-family: var(--font-body); font-size: 0.60rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
+  
+  /* ── Responsive ────────────────────────────────────────────── */
+  @media (max-width: 768px) {
+    .sidebar   { display: none; }
+    .mobileNav { display: flex; }
+  }

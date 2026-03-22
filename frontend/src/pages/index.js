@@ -4,12 +4,12 @@ import Head from "next/head";
 import Navbar from "../components/Navbar";
 import styles from "./index.module.css";
 
-const FuelMap       = dynamic(() => import("../components/FuelMap"),       { ssr: false });
+const FuelMap        = dynamic(() => import("../components/FuelMap"),        { ssr: false });
 const RouteOptimizer = dynamic(() => import("../components/RouteOptimizer"), { ssr: false });
-const FuelWallet    = dynamic(() => import("../components/FuelWallet"),    { ssr: false });
-const AIChat        = dynamic(() => import("../components/AIChat"),        { ssr: false });
+const FuelWallet     = dynamic(() => import("../components/FuelWallet"),     { ssr: false });
+const AIChat         = dynamic(() => import("../components/AIChat"),         { ssr: false });
 
-export default function Home() {
+export default function Home({ coop, onLogout }) {
   const [activeTab, setActiveTab] = useState("map");
 
   return (
@@ -20,14 +20,16 @@ export default function Home() {
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
       </Head>
 
-      {/* Sidebar renders outside the layout so it never affects flow */}
-      <Navbar activeTab={activeTab} onTabChange={setActiveTab} />
+      <Navbar
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        coop={coop}
+        onLogout={onLogout}
+      />
 
-      {/* Main content — margin-left via CSS var set by Navbar collapse toggle */}
       <div className={styles.layout}>
         <main className={styles.main}>
 
-          {/* Hero banner — map tab only */}
           {activeTab === "map" && (
             <div className={styles.heroBanner}>
               <div className={styles.heroContent}>
