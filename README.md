@@ -300,5 +300,5 @@ MIT License — free to use, modify, and distribute.
 - **Leaflet.js** for the mapping library
 - **DOE Philippines** for public fuel price data
 - All Filipino tricycle and jeepney drivers who inspired this project
-
+- Claude.ai by Anthropic for support in the development of this project
 ---
