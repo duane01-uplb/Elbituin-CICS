@@ -87,7 +87,7 @@ export default function Login({ onLogin }) {
           <div className={styles.formSide}>
             <div className={styles.card}>
               <div className={styles.cardHeader}>
-                <h2 className={styles.cardTitle}>Cooperative sign in</h2>
+                <h2 className={styles.cardTitle}>Cooperative Sign In</h2>
                 <p className={styles.cardSub}>
                   Enter your cooperative credentials to access the dashboard
                 </p>

@@ -19,12 +19,14 @@
   .panel {
     padding: 24px 20px;
     overflow-y: auto;
+    overflow-x: hidden; 
     border-right: 1px solid rgba(255,255,255,0.07);
     background: rgba(5,7,9,0.50);
     backdrop-filter: blur(24px);
     -webkit-backdrop-filter: blur(24px);
     display: flex;
     flex-direction: column;
+    min-width: 0; 
   }
   
   .panelTitle {
@@ -67,6 +69,7 @@
     gap: 3px;
     min-height: 52px;
     justify-content: center;
+    overflow: hidden; 
   }
   .coordDisplay:hover { border-color: rgba(255,107,26,0.35); background: rgba(255,107,26,0.06); }
   
@@ -81,7 +84,7 @@
   }
   
   .coordPlaceholder { font-size: 0.84rem; color: var(--text-muted); }
-  .coordLabel       { font-size: 0.86rem; font-weight: 600; color: var(--text-primary); }
+  .coordLabel       { font-size: 0.86rem; font-weight: 600; color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .coordValue       { font-size: 0.68rem; color: var(--text-muted); font-family: var(--font-mono); }
   
   /* ── Quick buttons ─────────────────────────────────────────── */
@@ -97,6 +100,7 @@
     color: var(--text-muted);
     cursor: pointer;
     transition: var(--ease-smooth);
+    white-space: nowrap; 
   }
   .quickBtn:hover { background: rgba(255,107,26,0.10); border-color: rgba(255,107,26,0.28); color: var(--amber-bright); }
   
@@ -110,10 +114,12 @@
     cursor: pointer;
     text-align: left;
     transition: var(--ease-glass);
+    min-width: 0; 
+    overflow: hidden;
   }
   .vehicleBtn:hover:not(.vehicleBtnActive) { border-color: rgba(255,255,255,0.16); background: rgba(255,255,255,0.07); }
   .vehicleBtnActive { border-color: rgba(255,107,26,0.40) !important; background: rgba(255,107,26,0.09) !important; }
-  .vehicleLabel       { font-size: 0.84rem; font-weight: 700; color: var(--text-primary); display: block; margin-bottom: 2px; }
+  .vehicleLabel       { font-size: 0.84rem; font-weight: 700; color: var(--text-primary); display: block; margin-bottom: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .vehicleConsumption { font-size: 0.66rem; color: var(--text-muted); display: block; font-family: var(--font-mono); }
   
   /* ── Fuel row ──────────────────────────────────────────────── */
@@ -129,6 +135,7 @@
     cursor: pointer;
     transition: var(--ease-glass);
     text-align: center;
+    min-width: 0;
   }
   .fuelBtn:hover:not(.fuelBtnActive) { background: rgba(255,255,255,0.07); color: var(--text-primary); }
   .fuelBtnActive {
@@ -160,6 +167,7 @@
     transition: var(--ease-bounce);
     display: flex; align-items: center; justify-content: center; gap: 8px;
     box-shadow: var(--shadow-amber), inset 0 1px 0 rgba(255,255,255,0.18);
+    width: 100%;
   }
   .submitBtn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 8px 32px rgba(255,107,26,0.40), inset 0 1px 0 rgba(255,255,255,0.18); }
   .submitBtn:active:not(:disabled) { transform: translateY(0); }
@@ -175,6 +183,7 @@
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
     animation: slideUp 0.30s ease;
+    overflow: hidden;
   }
   
   .resultTitle {
@@ -192,9 +201,11 @@
     border-radius: var(--r-sm);
     border: 1px solid rgba(255,255,255,0.07);
     display: flex; flex-direction: column; gap: 3px;
+    min-width: 0;
+    overflow: hidden;
   }
   .statHighlight { background: rgba(255,107,26,0.08) !important; border-color: rgba(255,107,26,0.28) !important; }
-  .statValue { font-family: var(--font-mono); font-size: 1.1rem; font-weight: 700; color: var(--text-primary); }
+  .statValue { font-family: var(--font-mono); font-size: 1.1rem; font-weight: 700; color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .statHighlight .statValue { color: var(--amber); }
   .statLabel { font-size: 0.64rem; color: var(--text-muted); font-weight: 500; }
   
@@ -205,6 +216,7 @@
     background: rgba(255,255,255,0.03);
     border: 1px solid rgba(255,255,255,0.07);
     border-radius: var(--r-md);
+    overflow: hidden; 
   }
   
   .breakdownTitle {
@@ -245,6 +257,8 @@
     display: flex;
     flex-direction: column;
     gap: 2px;
+    min-width: 0;
+    overflow: hidden; 
   }
   
   .breakdownMuted {
@@ -257,6 +271,9 @@
     font-size: 0.78rem;
     color: var(--text-secondary);
     font-family: var(--font-mono);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   
   .breakdownEq strong { color: var(--text-primary); }
@@ -271,9 +288,10 @@
     border: 1px solid rgba(0,229,160,0.22);
     border-radius: var(--r-md);
     margin-bottom: 10px;
+    overflow: hidden; 
   }
   .stationRecIcon   { font-size: 1.4rem; flex-shrink: 0; }
-  .stationRecName   { font-size: 0.85rem; font-weight: 700; color: var(--emerald); margin-bottom: 2px; }
+  .stationRecName   { font-size: 0.85rem; font-weight: 700; color: var(--emerald); margin-bottom: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .stationRecDetail { font-size: 0.70rem; color: var(--text-secondary); font-family: var(--font-mono); }
   .savingsPill {
     margin-left: auto;
@@ -299,7 +317,13 @@
   }
   
   /* ── Map wrapper ───────────────────────────────────────────── */
-  .mapWrapper { position: relative; flex: 1; min-height: 0; }
+  .mapWrapper {
+    position: relative;
+    flex: 1;
+    min-height: 0;
+    min-width: 0; 
+    overflow: hidden; 
+  }
   .map { width: 100%; height: 100%; min-height: 500px; }
   
   /* ── Legend ────────────────────────────────────────────────── */

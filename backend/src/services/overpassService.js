@@ -1,6 +1,4 @@
-// Overpass API service — fetches real fuel stations from OpenStreetMap
-// No API key required. Free to use.
-
+// Overpass API service
 const OVERPASS_URL = "https://overpass-api.de/api/interpreter";
 
 // Bounding box covering Metro Manila + nearby provinces (Laguna, Cavite, Rizal, Bulacan)
